@@ -1,54 +1,59 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.keras.models import Sequential
-from tensorflow.python.keras.layers import Dense, Conv1D, Flatten
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv1D, Flatten, Embedding
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction import FeatureHasher
 import json
 
-def train():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            # Currently, memory growth needs to be the same across GPUs
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            # Memory growth must be set before GPUs have been initialized
-            print(e)
 
+
+def preprocess_data(data_path):
     # Load data
-    with open('search_tree_40M_sorted.json', 'r') as f:
+    with open(data_path, 'r') as f:
         data = json.load(f)
 
     # Prepare data
     cards = list(data.keys())
     actions = list(data.values())
-    card_encoder = OneHotEncoder(sparse_output=True)
-    X = card_encoder.fit_transform(np.array(cards).reshape(-1, 1))
 
-    label_encoder = LabelEncoder()
-    y = label_encoder.fit_transform(actions)
-    y = tf.keras.utils.to_categorical(y)
+    # Encode cards
+    card_encoder = LabelEncoder()
+    X = card_encoder.fit_transform(cards)
 
-    # Split dataset
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1, random_state=42)  # further split for validation
+    # Encode actions
+    action_encoder = LabelEncoder()
+    y = action_encoder.fit_transform(actions)
+    y = tf.keras.utils.to_categorical(y)  # One-hot encode the labels
 
-    # Define model
+    return X, y, len(card_encoder.classes_), len(action_encoder.classes_)
+
+def create_model(num_cards, num_actions):
     model = Sequential([
-        Conv1D(32, kernel_size=3, activation='relu', input_shape=(X_train.shape[1], 1)),
+        Embedding(input_dim=num_cards, output_dim=50, input_length=1),  # 50 can be adjusted based on model complexity and dataset
         Flatten(),
         Dense(64, activation='relu'),
-        Dense(64, activation='relu'),
-        Dense(3, activation='softmax')
+        Dense(num_actions, activation='softmax')  # Change to match the number of unique actions
     ])
-
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    return model
 
-    # Train model
+def train():
+    X, y, num_cards, num_actions = preprocess_data('search_tree_40M_sorted.json')
+    
+    # Split dataset
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1, random_state=42)
+    
+    # Reshape input for embedding
+    X_train = X_train.reshape(-1, 1)
+    X_val = X_val.reshape(-1, 1)
+    X_test = X_test.reshape(-1, 1)
+
+    # Create and train the model
+    model = create_model(num_cards, num_actions)
     model.fit(X_train, y_train, epochs=10, batch_size=100, validation_data=(X_val, y_val))
 
     # Evaluate model
@@ -56,7 +61,19 @@ def train():
     print("Test Accuracy:", accuracy)
 
     # Save model
-    model.save('poker_decision_model_conv.h5')
+    model.save('poker_decision_model_embedding.h5')
 
 if __name__ == "__main__":
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        # Restrict TensorFlow to only use the first GPU
+        try:
+            tf.config.set_visible_devices(gpus[0], 'GPU')
+            logical_gpus = tf.config.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
+        except RuntimeError as e:
+            # Visible devices must be set before GPUs have been initialized
+            print(e)
     train()
