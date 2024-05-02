@@ -62,10 +62,11 @@ class Emulator(object):
         sb_amount = game_state["small_blind_amount"]
         return ActionChecker.legal_actions(players, player_pos, sb_amount)
 
-    def apply_action(self, game_state, action, bet_amount=0):
+    # Removed bet_amount since not needed for project
+    def apply_action(self, game_state, action):
         if game_state["street"] == Const.Street.FINISHED:
             game_state, events = self._start_next_round(game_state)
-        updated_state, messages = RoundManager.apply_action(game_state, action, bet_amount)
+        updated_state, messages = RoundManager.apply_action(game_state, action)
         events = [self.create_event(message[1]["message"]) for message in messages]
         events = [e for e in events if e]
         if self._is_last_round(updated_state, self.game_rule):
@@ -74,8 +75,11 @@ class Emulator(object):
 
     def _start_next_round(self, game_state):
         game_finished = game_state["round_count"] == self.game_rule["max_round"]
+        # print(f"==>> self.game_rule['max_round']: {self.game_rule["max_round"]}")
+        # print(f"==>> game_state['round_count']: {game_state["round_count"]}")
         game_state, events = self.start_new_round(game_state)
         if Event.GAME_FINISH == events[-1]["type"] or game_finished:
+            #TODO: This is being encountered. I think this is due to stacks of players going to 0 or something similar
             raise Exception("Failed to apply action. Because game is already finished.")
         return game_state, events
 
@@ -86,9 +90,9 @@ class Emulator(object):
             next_player_uuid = game_state["table"].seats.players[next_player_pos].uuid
             next_player_algorithm = self.fetch_player(next_player_uuid)
             msg = MessageBuilder.build_ask_message(next_player_pos, game_state)["message"]
-            action, amount = next_player_algorithm.declare_action(\
+            action = next_player_algorithm.declare_action(\
                     msg["valid_actions"], msg["hole_card"], msg["round_state"])
-            game_state, messages = RoundManager.apply_action(game_state, action, amount)
+            game_state, messages = RoundManager.apply_action(game_state, action)
             mailbox += messages
         events = [self.create_event(message[1]["message"]) for message in mailbox]
         events = [e for e in events if e]

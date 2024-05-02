@@ -1,5 +1,5 @@
-[submodule "POMCP"]
-	path = POMCP
+[submodule "POMCP-old"]
+	path = POMCP-old
 	url = https://github.com/MasonN808/POMCP.git
 	branch = main
 

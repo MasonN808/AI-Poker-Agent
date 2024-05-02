@@ -33,6 +33,8 @@ def evaluate_hand(hole_card, community_card):
 def _montecarlo_simulation(nb_player, hole_card, community_card):
     community_card = _fill_community_card(community_card, used_card=hole_card+community_card)
     unused_cards = _pick_unused_card((nb_player-1)*2, hole_card + community_card)
+    # i is number players?
+    # 
     opponents_hole = [unused_cards[2*i:2*i+2] for i in range(nb_player-1)]
     opponents_score = [HandEvaluator.eval_hand(hole, community_card) for hole in opponents_hole]
     my_score = HandEvaluator.eval_hand(hole_card, community_card)

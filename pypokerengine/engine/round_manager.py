@@ -27,7 +27,7 @@ class RoundManager:
   @classmethod
   def apply_action(self, original_state, action):
     state = self.__deep_copy_state(original_state)
-    state,bet_amount = self.__update_state_by_action(state, action)
+    state, bet_amount = self.__update_state_by_action(state, action)
     update_msg = self.__update_message(state, action, bet_amount)
     if self.__is_everyone_agreed(state):
       [player.save_street_action_histories(state["street"]) for player in state["table"].seats.players]
