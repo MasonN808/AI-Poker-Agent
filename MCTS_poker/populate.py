@@ -14,6 +14,7 @@ from pypokerengine.engine.round_manager import RoundManager
 # from pypokerengine.engine.hand_evaluator import eval_hand
 from pypokerengine.utils.game_state_utils import restore_game_state
 from pypokerengine.engine.poker_constants import PokerConstants as Const
+from pypokerengine.engine.hand_evaluator import hand_eval
 from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
@@ -82,8 +83,6 @@ class MCTS():
         # Make a new hacshmap with state strings as keys and values as optimal actions
         print(f"Number of nodes: {len(nodes.items())}")
         for _ , (key, value) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
-            if value.player == "opp":
-                continue
             # If node has no children, take a random action
             r = rand.random()
             if value.children == {}:
@@ -141,7 +140,7 @@ class MCTS():
         # Now tree is assumed to be a leaf node
         # Check if the node has been traversed
         if tree.visit == 0:
-            reward = self.rollout(tree.state, self.emulator)
+            reward = self.rollout_hand_eval(tree.state, self.emulator)
         else:
             # If node has been visited, expand the tree and perform rollout
             tree.expand(tree.valid_actions)
@@ -177,7 +176,7 @@ class MCTS():
             if tree.player == "main":
                 nodes = add_state_tree_to_external(nodes, tree.state.state_info, tree)
 
-            reward = self.rollout(tree.state, self.emulator)
+            reward = self.rollout_hand_eval(tree.state, self.emulator)
 
         # Do backpropogation up the tree
         self.backup(tree, reward)
@@ -207,6 +206,13 @@ class MCTS():
         end_game_state, events = emulator.run_until_round_finish(state.game_state)
         
         reward = end_game_state["table"].seats.players[0].stack - cur_stack
+        return reward
+
+    def rollout_hand_eval(self, state: State, emulator: Emulator):
+        main_hole_cards = state.game_state["table"].seats.players[0].hole_card
+        opp_hole_cards = state.game_state["table"].seats.players[0].hole_card
+        heuristic = hand_eval(main_hole_cards, state.community_card) - hand_eval(opp_hole_cards, state.community_card)
+        reward = heuristic
         return reward
 
 def is_round_finish(game_state):
