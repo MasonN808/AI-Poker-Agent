@@ -130,9 +130,9 @@ def add_state_tree_to_external(nodes: dict, state_info: str, tree) -> dict:
     return nodes
 
 def sort_cards(card_string):
-    suits_order = {'C': 0, 'D': 1, 'H': 2, 'S': 3}
+    suits_order = {'C': 0, 'D': 1, 'H': 2, 'S': 3, '0': 4}
     ranks_order = {str(n): n for n in range(2, 10)}
-    ranks_order.update({'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14})
+    ranks_order.update({'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '0': 15})
     
     def card_key(card):
         # Extract rank and suit, e.g., 'H5' -> ('H', 5)

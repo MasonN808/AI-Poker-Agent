@@ -14,7 +14,7 @@ from pypokerengine.engine.round_manager import RoundManager
 # from pypokerengine.engine.hand_evaluator import eval_hand
 from pypokerengine.utils.game_state_utils import restore_game_state
 from pypokerengine.engine.poker_constants import PokerConstants as Const
-from pypokerengine.engine.hand_evaluator import hand_eval
+from pypokerengine.engine.hand_evaluator import HandEvaluator
 from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
@@ -68,7 +68,8 @@ class MCTS():
         self.n_particles = n_particles
         self.tree = SearchTree()
         self.emulator = None
-        # self.timeout = 500
+        # self.timeout = 5000
+        self.hand_evaluator = HandEvaluator()
         # self.timeout = 100_000
         self.timeout = 40_000_000
 
@@ -79,7 +80,7 @@ class MCTS():
             if state == None:
                 # Sample an initial state (observation) and get the initialized pypoker emulator
                 state, self.emulator = State.random_state()  # s ~ I(s_0=s)
-            self.simulate(state, self.tree, 0)
+            self.simulate(state, self.tree)
         # Make a new hacshmap with state strings as keys and values as optimal actions
         print(f"Number of nodes: {len(nodes.items())}")
         for _ , (key, value) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
@@ -140,7 +141,11 @@ class MCTS():
         # Now tree is assumed to be a leaf node
         # Check if the node has been traversed
         if tree.visit == 0:
-            reward = self.rollout_hand_eval(tree.state, self.emulator)
+            # Sometimes this happens
+            if tree.state.game_state["table"].seats.players[0].hole_card == []:
+                reward = 0
+            else:
+                reward = self.rollout_hand_eval(tree.state, self.emulator)
         else:
             # If node has been visited, expand the tree and perform rollout
             tree.expand(tree.valid_actions)
@@ -157,7 +162,6 @@ class MCTS():
             # print(f"==>> tree.valid_actions: {tree.valid_actions}")
             # print(f"==>> ROUND FINISHED: {is_round_finish(tree.state.game_state)}")
             # print("-------------------------------")
-
             # Need to reset the players stack to prevent game from ending
             # TODO: Idk if this is right
             tree.state.game_state["table"].seats.players[0].stack = 1000
@@ -170,14 +174,21 @@ class MCTS():
 
             tree = child_tree
             tree.state = State.from_game_state(next_game_state)
+            # Sometimes this happens
+            # if tree.state.game_state["table"].seats.players[0].hole_card == []:
+            #     return
             tree.valid_actions = get_valid_actions(next_game_state)
 
             # Add the state and tree object to dictionary
             if tree.player == "main":
                 nodes = add_state_tree_to_external(nodes, tree.state.state_info, tree)
+            if tree.state.game_state["table"].seats.players[0].hole_card == []:
+                reward = 0
+            else:
+                reward = self.rollout_hand_eval(tree.state, self.emulator)
 
-            reward = self.rollout_hand_eval(tree.state, self.emulator)
-
+        # if tree.state.game_state["table"].seats.players[0].hole_card == []:
+        #     return
         # Do backpropogation up the tree
         self.backup(tree, reward)
 
@@ -210,8 +221,9 @@ class MCTS():
 
     def rollout_hand_eval(self, state: State, emulator: Emulator):
         main_hole_cards = state.game_state["table"].seats.players[0].hole_card
-        opp_hole_cards = state.game_state["table"].seats.players[0].hole_card
-        heuristic = hand_eval(main_hole_cards, state.community_card) - hand_eval(opp_hole_cards, state.community_card)
+        opp_hole_cards = state.game_state["table"].seats.players[1].hole_card
+        community_cards = state.game_state["table"].get_community_card()
+        heuristic = self.hand_evaluator.eval_hand(main_hole_cards, community_cards) - self.hand_evaluator.eval_hand(opp_hole_cards, community_cards)
         reward = heuristic
         return reward
 
@@ -224,6 +236,7 @@ if __name__ == '__main__':
 
     mcts = MCTS()
     nodes = mcts.search()
+    time_out = mcts.timeout
        
-    with open('search_tree_10M_sorted.json', 'w') as f:
+    with open(f'search_tree_{time_out}_sorted.json', 'w') as f:
         json.dump(nodes, f, indent=4)
