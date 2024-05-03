@@ -1,2 +1,5 @@
 *.h5 filter=lfs diff=lfs merge=lfs -text
 *.out filter=lfs diff=lfs merge=lfs -text
+poker_decision_model_embedding.h5 filter=lfs diff=lfs merge=lfs -text
+poker_decision_model_lstm.h5 filter=lfs diff=lfs merge=lfs -text
+populate-100M.out filter=lfs diff=lfs merge=lfs -text
