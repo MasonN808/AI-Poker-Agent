@@ -126,7 +126,11 @@ def add_state_tree_to_external(nodes: dict, state_info: str, tree) -> dict:
     # TODO: Should we save all the possible trees as a list?
     # Sort the cards
     sorted_card_str = sort_cards(state_info)
-    nodes[sorted_card_str] = tree
+    # Check if already in dict to append to list
+    if sorted_card_str in nodes:
+        nodes[sorted_card_str].append(tree)
+    else:
+        nodes[sorted_card_str] = [tree]
     return nodes
 
 def sort_cards(card_string):
