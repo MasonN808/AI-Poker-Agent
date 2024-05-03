@@ -71,7 +71,7 @@ class MCTS():
         # self.timeout = 5000
         self.hand_evaluator = HandEvaluator()
         # self.timeout = 100_000
-        self.timeout = 40_000_000
+        self.timeout = 100_000_000
 
     # Search module
     def search(self, state=None):

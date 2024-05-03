@@ -24,7 +24,7 @@ $ python testperf.py -n1 "Random Warrior 1" -a1 RandomPlayer -n2 "Random Warrior
 def testperf(agent_name1, agent1, agent_name2, agent2):		
 
 	# Init to play 500 games of 1000 rounds
-	num_game = 20
+	num_game = 100
 	max_round = 20
 	initial_stack = 1000
 	smallblind_amount = 10

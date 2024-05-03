@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import tensorflow as tf
 
@@ -22,17 +23,23 @@ def preprocess_data(data_path):
     # Encode cards
     card_encoder = LabelEncoder()
     X = card_encoder.fit_transform(cards)
+    # Saving the encoder
+    with open('/nas/ucb/mason/AI-Poker-Agent/MCTS_poker/mlp/card_encoder.pkl', 'wb') as f:
+        pickle.dump(card_encoder, f)
 
     # Encode actions
     action_encoder = LabelEncoder()
     y = action_encoder.fit_transform(actions)
     y = tf.keras.utils.to_categorical(y)  # One-hot encode the labels
 
+    with open('/nas/ucb/mason/AI-Poker-Agent/MCTS_poker/mlp/action_encoder.pkl', 'wb') as f:
+        pickle.dump(action_encoder, f)
+
     return X, y, len(card_encoder.classes_), len(action_encoder.classes_)
 
 def create_model(num_cards, num_actions):
     model = Sequential([
-        Embedding(input_dim=num_cards, output_dim=50, input_length=1),  # 50 can be adjusted based on model complexity and dataset
+        Embedding(input_dim=num_cards, output_dim=64),  # 50 can be adjusted based on model complexity and dataset
         Flatten(),
         Dense(64, activation='relu'),
         Dense(num_actions, activation='softmax')  # Change to match the number of unique actions
@@ -61,7 +68,7 @@ def train():
     print("Test Accuracy:", accuracy)
 
     # Save model
-    model.save('poker_decision_model_embedding.h5')
+    model.save('mlp/poker_decision_model_embedding.h5')
 
 if __name__ == "__main__":
     print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
