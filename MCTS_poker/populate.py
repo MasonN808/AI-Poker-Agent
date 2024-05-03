@@ -1,3 +1,4 @@
+from collections import Counter
 import copy
 import random
 import math
@@ -68,13 +69,14 @@ class MCTS():
         self.n_particles = n_particles
         self.tree = SearchTree()
         self.emulator = None
-        # self.timeout = 5000
+        self.timeout = 5000
         self.hand_evaluator = HandEvaluator()
         # self.timeout = 100_000
-        self.timeout = 100_000_000
+        # self.timeout = 100_000_000
 
     # Search module
     def search(self, state=None):
+        # TODO: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
         # Repeat Simulations until timeout
         for _ in tqdm(range(self.timeout), desc='Progress'):
             if state == None:
@@ -83,27 +85,53 @@ class MCTS():
             self.simulate(state, self.tree)
         # Make a new hacshmap with state strings as keys and values as optimal actions
         print(f"Number of nodes: {len(nodes.items())}")
-        for _ , (key, value) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
-            # If node has no children, take a random action
-            r = rand.random()
-            if value.children == {}:
-                if r <= 0.5:
-                    action = value.valid_actions[1]
-                elif r<= 0.9 and len(value.valid_actions) == 3:
-                    action = value.valid_actions[2]
+        many_trees = 0
+        singleton_trees = 0
+        for _ , (key, trees) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
+            optimal_actions = []
+            for tree in trees:
+                # If node has no children, take a random action
+                if tree.children == {}:
+                    pass
+                # If at least one child has been traversed, then it has value
+                # We choose the child with maximal value
+                # elif(any(hasattr(tree, 'visit') and getattr(tree, 'visit') == 0  for tree in tree.children)):
+                #     action = max(tree.children.values(), key=lambda child: child.value).action
+                # If all children have non-zero values use maximal value
+                # TODO: could make this better since redundant as above elif
                 else:
-                    action = value.valid_actions[0]
-            # If at least one child has been traversed, then it has value
-            # We choose the child with maximal value
-            elif(any(hasattr(tree, 'visit') and getattr(tree, 'visit') == 0  for tree in value.children)):
-                action = max(value.children.values(), key=lambda child: child.value).action
-            # If all children have non-zero values use maximal value
-            # TODO: could make this better since redundant as above elif
-            else:
-                action = max(value.children.values(), key=lambda child: child.value).action
-            state_actions[key] = action
+                    action = max(tree.children.values(), key=lambda child: child.value).action
+                    optimal_actions.append(action)
 
-            # TODO: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
+            # If none of the trees have children perform random action
+            if optimal_actions == []:
+                singleton_trees += 1
+                r = rand.random()
+                if r <= 0.5:
+                    action = tree.valid_actions[1]
+                elif r<= 0.9 and len(tree.valid_actions) == 3:
+                    action = tree.valid_actions[2]
+                else:
+                    action = tree.valid_actions[0]
+                state_actions[key] = action
+            # Select the action that appears the most amount of times
+            else:
+                many_trees += 1
+
+                # Count the occurrences of each element
+                counter = Counter(optimal_actions)
+
+                # Find the maximum count
+                max_count = max(counter.values())
+
+                most_common_actions = [element for element, count in counter.items() if count == max_count]
+
+                random_most_common_action = random.choice(most_common_actions)
+
+                state_actions[key] = random_most_common_action
+        print(f"==>> many_trees: {many_trees}")
+        print(f"==>> singleton_trees: {singleton_trees}")
+                
         return state_actions
 
     def simulate(self, state, tree):
