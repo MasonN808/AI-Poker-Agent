@@ -1,3 +1,4 @@
+import copy
 import random
 import sys
 sys.path.append("./")
@@ -12,23 +13,27 @@ from pypokerengine.engine.round_manager import RoundManager
 #TODO: Think about ways to make this smarter like configuring the random distributions away from random uniform across all potential values (e.g., skewed gaussian)
 
 class State:
-    def __init__(self, hole_card_main: list[str], community_cards: list[str], game_state: dict) -> None:
+    def __init__(self, hole_card_main: list[str]=None, community_cards: list[str]=None, state_info: str=None, game_state: dict=None) -> None:
         self.hole_card_main = hole_card_main
-        self.community_card = community_cards
+        self.community_cards = community_cards
         # self.opp_previous_action = ... # TODO Implement
-        self.state_info = self.get_state_info_str(hole_card_main, community_cards)
+        if self.hole_card_main == None or self.community_cards == None:
+            self.state_info = None
+        else:
+            self.state_info = self.get_state_info_str(hole_card_main, community_cards)
         self.game_state = game_state
     
     @classmethod
-    def from_game_state(self, game_state: dict):
-        self.hole_cards_main = [str(i) for i in game_state["table"].seats.players[0].hole_card]
+    def from_game_state(cls, game_state: dict):
+        hole_cards_main = [str(i) for i in game_state["table"].seats.players[0].hole_card]
         # opp_hole = [str(i) for i in game_state["table"].seats.players[1].hole_card]
         # print(f"==>> opp_hole: {opp_hole}")
         # print(f"==>> self.hole_cards_main: {self.hole_cards_main}")
-        self.community_cards = [str(i) for i in game_state["table"].get_community_card()]
-        self.state_info = self.get_state_info_str(self.hole_cards_main, self.community_cards)
-        self.game_state = game_state
-        return self
+        community_cards = [str(i) for i in game_state["table"].get_community_card()]
+        state_info = cls.get_state_info_str(hole_cards_main, community_cards)
+        game_state_copy = game_state.copy()
+        return cls(hole_card_main=hole_cards_main, community_cards=community_cards, state_info=state_info, game_state=game_state_copy)
+
 
     @staticmethod
     def get_state_info_str(hole_cards, community_cards):
@@ -39,7 +44,6 @@ class State:
         sorted_card_string = sort_cards(state_info)
         return sorted_card_string
     
-    @classmethod
     def random_state(self):
         """
         Generates a random state of the game.
@@ -116,7 +120,7 @@ def from_state_action_to_state(emulator: Emulator, game_state: dict, action: str
     new_game_s, messages = emulator.apply_action(game_state, action)
     return new_game_s, messages
 
-def add_state_tree_to_external(nodes: dict, state_info: str, tree) -> dict:
+def add_state_tree_to_external(nodes: dict, tree) -> dict:
     """
     Addes a state-tree pair to dictionary for optimal action decision-making 
     that will be saved to json file which will be referenced during test-time 
@@ -124,13 +128,15 @@ def add_state_tree_to_external(nodes: dict, state_info: str, tree) -> dict:
     # TODO: worried that if tree.state.state_info already exists. Might have to merge the trees which will mess up the tree
     # This is where I think POMCP solves this issue
     # TODO: Should we save all the possible trees as a list?
-    # Sort the cards
-    sorted_card_str = sort_cards(state_info)
+    # Sort the cards just in case
+    sorted_card_str = sort_cards(tree.state.state_info)
     # Check if already in dict to append to list
     if sorted_card_str in nodes:
+        # if tree nodes[sorted_card_str]:
         nodes[sorted_card_str].append(tree)
     else:
         nodes[sorted_card_str] = [tree]
+
     return nodes
 
 def sort_cards(card_string):
