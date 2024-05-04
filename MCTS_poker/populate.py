@@ -67,29 +67,75 @@ class MCTS():
         self.epsilon = epsilon
         self.explore = explore
         self.n_particles = n_particles
-        self.tree = SearchTree()
         self.emulator = None
-        self.timeout = 5000
         self.hand_evaluator = HandEvaluator()
-        # self.timeout = 100_000
+        # self.timeout = 5000
+        self.timeout = 200_000
         # self.timeout = 100_000_000
+        self.reinvigoration = 1000
 
     # Search module
     def search(self, state=None):
+        global nodes
         # TODO: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
         # Repeat Simulations until timeout
-        for _ in tqdm(range(self.timeout), desc='Progress'):
+        for t in tqdm(range(self.timeout), desc='Progress'):
+            # TODO: mason-decide if this is right or smaple from new state after each simulate()
             if state == None:
+                print("new state")
                 # Sample an initial state (observation) and get the initialized pypoker emulator
-                state, self.emulator = State.random_state()  # s ~ I(s_0=s)
-            self.simulate(state, self.tree)
+                state_instance = State()
+                state, self.emulator = state_instance.random_state()  # s ~ I(s_0=s)
+            # print(f"==>> state: {state.state_info}")
+            if state.game_state['next_player'] == 1:
+                player = "main"
+            else:
+                player = "opp"
+            
+            # Check if state info is a key in nodes to avoid creating unnecessary new tree objects
+            if state.state_info in nodes and player == "main":
+                # Check if any trees in value-tree list has the same opponent hole card
+                opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
+                trees = [tup[1] for tup in opp_hole_cards_and_trees if 
+                         (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
+                         (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet is the same
+                # TODO: Figure out this assertion
+                # assert len(trees) <= 1, "Tree should only be one, otherwise, we have duplicate states in dictionary NOT GOOD!"
+                if len(trees) >= 1:
+                    self.simulate(state, trees[0])
+                    # Skip outside simulate
+                    continue
+                else:
+                    tree = SearchTree(player=player, state=state, action=None, parent=None)
+            else:
+                tree = SearchTree(player=player, state=state, action=None, parent=None)
+            # if tree.player == "main":
+            #     nodes = add_state_tree_to_external(nodes, tree)
+            self.simulate(state, tree)
+
+            # Sample from the start state every 1000 simulations
+            if t == self.reinvigoration:
+                state = None 
+
         # Make a new hacshmap with state strings as keys and values as optimal actions
         print(f"Number of nodes: {len(nodes.items())}")
         many_trees = 0
         singleton_trees = 0
         for _ , (key, trees) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
             optimal_actions = []
+            # print("".center(50, "-"))
+
+            if len(trees) == 1:
+                singleton_trees += 1
+            else:
+                many_trees += 1
+
             for tree in trees:
+                # if tree.state.community_cards != []:
+                    # print(key + f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
+
+                assert tree.state.state_info == key
+
                 # If node has no children, take a random action
                 if tree.children == {}:
                     pass
@@ -102,10 +148,9 @@ class MCTS():
                 else:
                     action = max(tree.children.values(), key=lambda child: child.value).action
                     optimal_actions.append(action)
-
+            # print("".center(50, "-"))
             # If none of the trees have children perform random action
             if optimal_actions == []:
-                singleton_trees += 1
                 r = rand.random()
                 if r <= 0.5:
                     action = tree.valid_actions[1]
@@ -116,8 +161,6 @@ class MCTS():
                 state_actions[key] = action
             # Select the action that appears the most amount of times
             else:
-                many_trees += 1
-
                 # Count the occurrences of each element
                 counter = Counter(optimal_actions)
 
@@ -146,8 +189,8 @@ class MCTS():
             tree.valid_actions = get_valid_actions(state.game_state)
 
         # Add the state and tree object to dictionary
-        if tree.player == "main":
-            nodes = add_state_tree_to_external(nodes, tree.state.state_info, tree)
+        # if tree.player == "main":
+        #     nodes = add_state_tree_to_external(nodes, tree)
 
         # Keep going down tree until a node with no children is found
         while tree.children:
@@ -157,18 +200,17 @@ class MCTS():
             if child.state == None:
                 next_game_state , _ = from_state_action_to_state(self.emulator, tree.state.game_state, child.action)
                 child.state = State.from_game_state(next_game_state)
-            if child.valid_actions == None:
+                # Add the state and tree object to dictionary
                 child.valid_actions = get_valid_actions(child.state.game_state)
-
-            tree = child
-            
-            # Add the state and tree object to dictionary
-            if tree.player == "main":
-                nodes = add_state_tree_to_external(nodes, tree.state.state_info, tree)
+                # if tree.player == "main":
+                #     nodes = add_state_tree_to_external(nodes, tree)
+            tree = child        
 
         # Now tree is assumed to be a leaf node
         # Check if the node has been traversed
         if tree.visit == 0:
+            # print(f"==>> tree.state: {tree.state.state_info}")
+
             # Sometimes this happens
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
@@ -176,20 +218,12 @@ class MCTS():
                 reward = self.rollout_hand_eval(tree.state, self.emulator)
         else:
             # If node has been visited, expand the tree and perform rollout
+            # NOTE: all children do not have state or valid actions after expansion
             tree.expand(tree.valid_actions)
+            # print("EXPANDED")
 
             # Rollout on first child, other children will eventually get rolled out via UCB1
             action, child_tree = next(iter(tree.children.items()))
-            # print("-------------------------------")
-            # print(f"==>> tree.player: {tree.player}")
-            # print(f"==>> tree.action: {tree.action}")
-            # print(f"==>> tree.visit: {tree.visit}")
-            # print(f"==>> tree.value: {tree.value}")
-            # print(f"==>> tree.children: {tree.children}")
-            # print(f"==>> tree.state: {tree.state}")
-            # print(f"==>> tree.valid_actions: {tree.valid_actions}")
-            # print(f"==>> ROUND FINISHED: {is_round_finish(tree.state.game_state)}")
-            # print("-------------------------------")
             # Need to reset the players stack to prevent game from ending
             # TODO: Idk if this is right
             tree.state.game_state["table"].seats.players[0].stack = 1000
@@ -202,14 +236,12 @@ class MCTS():
 
             tree = child_tree
             tree.state = State.from_game_state(next_game_state)
-            # Sometimes this happens
-            # if tree.state.game_state["table"].seats.players[0].hole_card == []:
-            #     return
             tree.valid_actions = get_valid_actions(next_game_state)
 
             # Add the state and tree object to dictionary
-            if tree.player == "main":
-                nodes = add_state_tree_to_external(nodes, tree.state.state_info, tree)
+            # if tree.player == "main":
+            #     nodes = add_state_tree_to_external(nodes, tree)
+
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
@@ -218,8 +250,14 @@ class MCTS():
         # if tree.state.game_state["table"].seats.players[0].hole_card == []:
         #     return
         # Do backpropogation up the tree
+        # print("".center(50, "-"))
+        # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
         self.backup(tree, reward)
+        # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
 
+        # print("".center(50, "-"))
+        if tree.player == "main":
+            nodes = add_state_tree_to_external(nodes, tree)
         return
     
     @staticmethod
@@ -232,7 +270,7 @@ class MCTS():
             tree.visit += 1
             # Assign negative reward to Opponent
             # Alternate the reward for 0-sum 2-player poker
-            if tree.player == "opp":
+            if tree.player == "main":
                 tree.value += reward
             else:
                 tree.value -= reward
