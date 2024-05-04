@@ -54,7 +54,8 @@ class MCTSPlayer(BasePokerPlayer):
             r = rand.random()
             if r <= 0.5:
                 call_action_info = valid_actions[1]
-            elif r<= 0.9 and len(valid_actions ) == 3:
+            # The best defense against an always raising player is to always raise as well for the random policy
+            elif r<= 1 and len(valid_actions ) == 3:
                 call_action_info = valid_actions[2]
             else:
                 call_action_info = valid_actions[0]
