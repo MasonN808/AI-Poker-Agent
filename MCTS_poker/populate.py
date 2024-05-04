@@ -72,9 +72,10 @@ class MCTS():
         self.hand_evaluator = HandEvaluator()
 
         self.num_rollouts = 5
-        self.timeout = 5000
+        # self.timeout = 5000
         # self.timeout = 200_000
         # self.timeout = 4_500_000
+        self.timeout = 2_00_000
         # self.timeout = 50_000_000
         self.reinvigoration = 1000
 
