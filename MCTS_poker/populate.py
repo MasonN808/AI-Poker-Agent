@@ -20,7 +20,9 @@ from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
 from tqdm import tqdm
+# from pathos.pools import ParallelPool as Pool
 from pathos.multiprocessing import ProcessingPool as Pool
+# from pathos.threading import ThreadPool as Pool
 # from pathos.pools import ProcessPool
 
 
@@ -213,12 +215,12 @@ class MCTS():
                 reward = 0
             else:
                 reward = []
-                pool.restart()
+                # pool.restart()
                 state_args = [tree.state for _ in range(self.num_rollouts)]
                 emulator_args = [self.emulator for _ in range(self.num_rollouts)]
                 reward = pool.map(self.rollout, state_args, emulator_args)
-                pool.close()
-                pool.join()
+                # pool.close()
+                # pool.join()
                 # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
                 # for rollout in range(self.num_rollouts):
                 #     reward.append(self.rollout(tree.state, self.emulator))
@@ -249,12 +251,12 @@ class MCTS():
                 reward = 0
             else:
                 reward = []
-                pool.restart()
+                # pool.restart()
                 state_args = [tree.state for _ in range(self.num_rollouts)]
                 emulator_args = [self.emulator for _ in range(self.num_rollouts)]
                 reward = pool.map(self.rollout, state_args, emulator_args)
-                pool.close()
-                pool.join()
+                # pool.close()
+                # pool.join()
                 # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
                 # for rollout in range(self.num_rollouts):
                 #     reward.append(self.rollout(tree.state, self.emulator))
