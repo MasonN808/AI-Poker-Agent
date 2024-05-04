@@ -69,16 +69,18 @@ class MCTS():
         self.n_particles = n_particles
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
+
+        self.num_rollouts = 10
         # self.timeout = 5000
         # self.timeout = 200_000
         self.timeout = 4_500_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 100
+        self.reinvigoration = 1000
 
     # Search module
     def search(self, state=None):
         global nodes
-        # TODO: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
+        # NOTE: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
         # Repeat Simulations until timeout
         for t in tqdm(range(self.timeout), desc='Progress'):
             # TODO: mason-decide if this is right or smaple from new state after each simulate()
@@ -97,6 +99,7 @@ class MCTS():
             if state.state_info in nodes and player == "main":
                 # Check if any trees in value-tree list has the same opponent hole card
                 opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
+                # Now get trees that have the same community card and opponnent hole card
                 trees = [tup[1] for tup in opp_hole_cards_and_trees if 
                          (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
                          (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet is the same
@@ -211,13 +214,28 @@ class MCTS():
         # Check if the node has been traversed
         if tree.visit == 0:
             # print(f"==>> tree.state: {tree.state.state_info}")
-
+            # main_hole_cards = tree.state.game_state["table"].seats.players[0].hole_card
+            # opp_hole_cards = tree.state.game_state["table"].seats.players[1].hole_card
+            # community_cards = tree.state.game_state["table"].get_community_card()
+            # heuristic = self.hand_evaluator.eval_hand(main_hole_cards, community_cards) - self.hand_evaluator.eval_hand(opp_hole_cards, community_cards)
+            # print(heuristic)
             # Sometimes this happens
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
-                reward = self.rollout_hand_eval(tree.state, self.emulator)
+                reward = []
+                # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
+                for rollout in range(self.num_rollouts):
+                    reward.append(self.rollout(tree.state, self.emulator))
+                # avg_reward = sum(rewards) / len(rewards)
+                # reward = avg_reward
         else:
+            # if tree.state.game_state["table"].seats.players[0].hole_card != []:
+            #     main_hole_cards = tree.state.game_state["table"].seats.players[0].hole_card
+            #     opp_hole_cards = tree.state.game_state["table"].seats.players[1].hole_card
+            #     community_cards = tree.state.game_state["table"].get_community_card()
+            #     heuristic = self.hand_evaluator.eval_hand(main_hole_cards, community_cards) - self.hand_evaluator.eval_hand(opp_hole_cards, community_cards)
+            #     print(heuristic)
             # If node has been visited, expand the tree and perform rollout
             # NOTE: all children do not have state or valid actions after expansion
             tree.expand(tree.valid_actions)
@@ -225,6 +243,7 @@ class MCTS():
 
             # Rollout on first child, other children will eventually get rolled out via UCB1
             action, child_tree = next(iter(tree.children.items()))
+
             # Need to reset the players stack to prevent game from ending
             # TODO: Idk if this is right
             tree.state.game_state["table"].seats.players[0].stack = 1000
@@ -246,14 +265,21 @@ class MCTS():
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
-                reward = self.rollout_hand_eval(tree.state, self.emulator)
+                reward = []
+                # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
+                for rollout in range(self.num_rollouts):
+                    reward.append(self.rollout(tree.state, self.emulator))
 
-        # if tree.state.game_state["table"].seats.players[0].hole_card == []:
-        #     return
+                # avg_reward = sum(rewards) / len(rewards)
+                # reward = avg_reward
+
         # Do backpropogation up the tree
-        # print("".center(50, "-"))
         # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
-        self.backup(tree, reward)
+        if isinstance(reward, list):
+            for r in reward:
+                self.backup(tree, r)
+        else:
+            self.backup(tree, reward)
         # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
 
 
@@ -283,6 +309,7 @@ class MCTS():
         cur_stack = state.game_state["table"].seats.players[0].stack
         end_game_state, events = emulator.run_until_round_finish(state.game_state)
         
+        # How much the main player gained or lost
         reward = end_game_state["table"].seats.players[0].stack - cur_stack
         return reward
 
@@ -306,5 +333,6 @@ if __name__ == '__main__':
     time_out = mcts.timeout
     reinvigoration = mcts.reinvigoration
        
-    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}.json', 'w') as f:
+    # with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}.json', 'w') as f:
+    with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)

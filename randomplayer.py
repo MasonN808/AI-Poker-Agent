@@ -27,7 +27,8 @@ class RandomPlayer(BasePokerPlayer):
     r = rand.random()
     if r <= 0.5:
       call_action_info = valid_actions[1]
-    elif r<= 0.95 and len(valid_actions ) == 3:
+    # I think random player should never fold during search tree population since this will immediately let our player win
+    elif r<= 1 and len(valid_actions ) == 3:
       call_action_info = valid_actions[2]
     else:
       call_action_info = valid_actions[0]

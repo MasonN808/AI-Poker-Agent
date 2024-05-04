@@ -23,7 +23,7 @@ class MCTSPlayer(BasePokerPlayer):
                 return pickle.load(f)
 
         def load_nodes():
-            with open('search_tree_4500000_reinvigoration-1000.json', 'r') as f:
+            with open('search_tree_4500000_reinvigoration-100_v2.json', 'r') as f:
             # with open('/nas/ucb/mason/AI-Poker-Agent/search_tree_40M_sorted.json', 'r') as f:
                 state_actions = json.load(f)
             return state_actions
