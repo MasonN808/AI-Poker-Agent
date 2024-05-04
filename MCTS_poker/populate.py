@@ -20,10 +20,14 @@ from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
 from tqdm import tqdm
+from pathos.multiprocessing import ProcessingPool as Pool
+# from pathos.pools import ProcessPool
 
 
 nodes = {}
 state_actions = {}
+pool = Pool(nodes=10)
+
 class SearchTree:
     def __init__(self, player = None, state=None, action=None, visit=0, value=0, parent=None):
         self.player: str = player    # "main" or "opp"
@@ -71,11 +75,11 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        self.num_rollouts = 5
-        # self.timeout = 5000
+        self.num_rollouts = 10
+        self.timeout = 5000
         # self.timeout = 200_000
         # self.timeout = 4_500_000
-        self.timeout = 2_00_000
+        # self.timeout = 2_00_000
         # self.timeout = 50_000_000
         self.reinvigoration = 1000
 
@@ -183,6 +187,7 @@ class MCTS():
         Simulation performed using the UCT Algorithm
         """
         global nodes
+        global pool
 
         assert tree.state != None, "State is None"
         if tree.valid_actions == None:
@@ -208,9 +213,15 @@ class MCTS():
                 reward = 0
             else:
                 reward = []
+                pool.restart()
+                state_args = [tree.state for _ in range(self.num_rollouts)]
+                emulator_args = [self.emulator for _ in range(self.num_rollouts)]
+                reward = pool.map(self.rollout, state_args, emulator_args)
+                pool.close()
+                pool.join()
                 # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
-                for rollout in range(self.num_rollouts):
-                    reward.append(self.rollout(tree.state, self.emulator))
+                # for rollout in range(self.num_rollouts):
+                #     reward.append(self.rollout(tree.state, self.emulator))
 
         else:
             # If node has been visited, expand the tree and perform rollout
@@ -238,9 +249,15 @@ class MCTS():
                 reward = 0
             else:
                 reward = []
+                pool.restart()
+                state_args = [tree.state for _ in range(self.num_rollouts)]
+                emulator_args = [self.emulator for _ in range(self.num_rollouts)]
+                reward = pool.map(self.rollout, state_args, emulator_args)
+                pool.close()
+                pool.join()
                 # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
-                for rollout in range(self.num_rollouts):
-                    reward.append(self.rollout(tree.state, self.emulator))
+                # for rollout in range(self.num_rollouts):
+                #     reward.append(self.rollout(tree.state, self.emulator))
 
         # Do backpropogation up the tree
         if isinstance(reward, list):
