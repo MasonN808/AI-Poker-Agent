@@ -21,6 +21,7 @@ from randomplayer import RandomPlayer
 import random as rand
 from tqdm import tqdm
 
+
 nodes = {}
 state_actions = {}
 class SearchTree:
@@ -70,7 +71,7 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        self.num_rollouts = 10
+        self.num_rollouts = 5
         self.timeout = 5000
         # self.timeout = 200_000
         # self.timeout = 4_500_000
@@ -83,9 +84,10 @@ class MCTS():
         # NOTE: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
         # Repeat Simulations until timeout
         for t in tqdm(range(self.timeout), desc='Progress'):
+            # print(t)
             # TODO: mason-decide if this is right or smaple from new state after each simulate()
             if state == None:
-                print("new state")
+                # print("new state")
                 # Sample an initial state (observation) and get the initialized pypoker emulator
                 state_instance = State()
                 state, self.emulator = state_instance.random_state()  # s ~ I(s_0=s)
@@ -106,17 +108,22 @@ class MCTS():
                 # TODO: Figure out this assertion
                 # assert len(trees) <= 1, "Tree should only be one, otherwise, we have duplicate states in dictionary NOT GOOD!"
                 if len(trees) >= 1:
-                    self.simulate(state, trees[0])
+                    while trees:
+                        self.simulate(state, trees.pop())
+                    # Sample from the start state every n simulations
+                    if t % self.reinvigoration == 0:
+                        state = None 
                     # Skip outside simulate
                     continue
                 else:
+                    # assert len(trees) != 0, "Length of trees should never be 0!"
                     tree = SearchTree(player=player, state=state, action=None, parent=None)
             else:
                 tree = SearchTree(player=player, state=state, action=None, parent=None)
 
             self.simulate(state, tree)
 
-            # Sample from the start state every 1000 simulations
+            # Sample from the start state every n simulations
             if t % self.reinvigoration == 0:
                 state = None 
 
@@ -133,9 +140,6 @@ class MCTS():
                 many_trees += 1
 
             for tree in trees:
-                # if tree.state.community_cards != []:
-                    # print(key + f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
-
                 assert tree.state.state_info == key
 
                 # If node has no children, take a random action
@@ -258,10 +262,11 @@ class MCTS():
             tree.visit += 1
             # Assign negative reward to Opponent
             # Alternate the reward for 0-sum 2-player poker
+            # NOTE:  (reward - tree.value)/tree.visit from POMCP Paper
             if tree.player == "opp":
-                tree.value += reward
+                tree.value += (reward - tree.value)/tree.visit
             else:
-                tree.value -= reward
+                tree.value -= (reward - tree.value)/tree.visit
             
             tree = tree.parent
         
