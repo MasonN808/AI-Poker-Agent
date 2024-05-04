@@ -27,10 +27,16 @@ class RandomPlayer(BasePokerPlayer):
     r = rand.random()
     if r <= 0.5:
       call_action_info = valid_actions[1]
-    elif r<= 0.9 and len(valid_actions ) == 3:
+    elif r<= 0.95 and len(valid_actions ) == 3:
       call_action_info = valid_actions[2]
     else:
       call_action_info = valid_actions[0]
+    # if r <= 0.5:
+    #   call_action_info = valid_actions[1]
+    # elif r<= 0.9 and len(valid_actions ) == 3:
+    #   call_action_info = valid_actions[2]
+    # else:
+    #   call_action_info = valid_actions[0]
     action = call_action_info["action"]
     return action  # action returned here is sent to the poker engine
 
