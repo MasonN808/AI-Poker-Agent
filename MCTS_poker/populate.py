@@ -71,9 +71,9 @@ class MCTS():
         self.hand_evaluator = HandEvaluator()
 
         self.num_rollouts = 10
-        # self.timeout = 5000
+        self.timeout = 5000
         # self.timeout = 200_000
-        self.timeout = 4_500_000
+        # self.timeout = 4_500_000
         # self.timeout = 50_000_000
         self.reinvigoration = 1000
 
@@ -281,7 +281,6 @@ class MCTS():
         else:
             self.backup(tree, reward)
         # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
-
 
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
