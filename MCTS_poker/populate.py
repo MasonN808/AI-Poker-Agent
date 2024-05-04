@@ -70,9 +70,10 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
         # self.timeout = 5000
-        self.timeout = 200_000
-        # self.timeout = 100_000_000
-        self.reinvigoration = 1000
+        # self.timeout = 200_000
+        self.timeout = 4_500_000
+        # self.timeout = 50_000_000
+        self.reinvigoration = 100
 
     # Search module
     def search(self, state=None):
@@ -114,7 +115,7 @@ class MCTS():
             self.simulate(state, tree)
 
             # Sample from the start state every 1000 simulations
-            if t == self.reinvigoration:
+            if t % self.reinvigoration == 0:
                 state = None 
 
         # Make a new hacshmap with state strings as keys and values as optimal actions
@@ -148,7 +149,7 @@ class MCTS():
                 else:
                     action = max(tree.children.values(), key=lambda child: child.value).action
                     optimal_actions.append(action)
-            # print("".center(50, "-"))
+
             # If none of the trees have children perform random action
             if optimal_actions == []:
                 r = rand.random()
@@ -255,7 +256,7 @@ class MCTS():
         self.backup(tree, reward)
         # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
 
-        # print("".center(50, "-"))
+
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
         return
@@ -270,7 +271,7 @@ class MCTS():
             tree.visit += 1
             # Assign negative reward to Opponent
             # Alternate the reward for 0-sum 2-player poker
-            if tree.player == "main":
+            if tree.player == "opp":
                 tree.value += reward
             else:
                 tree.value -= reward
@@ -303,6 +304,7 @@ if __name__ == '__main__':
     mcts = MCTS()
     nodes = mcts.search()
     time_out = mcts.timeout
+    reinvigoration = mcts.reinvigoration
        
-    with open(f'search_tree_{time_out}_sorted.json', 'w') as f:
+    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}.json', 'w') as f:
         json.dump(nodes, f, indent=4)
