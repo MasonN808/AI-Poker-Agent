@@ -113,8 +113,7 @@ class MCTS():
                     tree = SearchTree(player=player, state=state, action=None, parent=None)
             else:
                 tree = SearchTree(player=player, state=state, action=None, parent=None)
-            # if tree.player == "main":
-            #     nodes = add_state_tree_to_external(nodes, tree)
+
             self.simulate(state, tree)
 
             # Sample from the start state every 1000 simulations
@@ -127,7 +126,6 @@ class MCTS():
         singleton_trees = 0
         for _ , (key, trees) in enumerate(tqdm(nodes.items(), desc='Processing nodes')):
             optimal_actions = []
-            # print("".center(50, "-"))
 
             if len(trees) == 1:
                 singleton_trees += 1
@@ -143,12 +141,6 @@ class MCTS():
                 # If node has no children, take a random action
                 if tree.children == {}:
                     pass
-                # If at least one child has been traversed, then it has value
-                # We choose the child with maximal value
-                # elif(any(hasattr(tree, 'visit') and getattr(tree, 'visit') == 0  for tree in tree.children)):
-                #     action = max(tree.children.values(), key=lambda child: child.value).action
-                # If all children have non-zero values use maximal value
-                # TODO: could make this better since redundant as above elif
                 else:
                     action = max(tree.children.values(), key=lambda child: child.value).action
                     optimal_actions.append(action)
@@ -187,14 +179,9 @@ class MCTS():
         """
         global nodes
 
-        if tree.state == None:
-            tree.state = state
+        assert tree.state != None, "State is None"
         if tree.valid_actions == None:
             tree.valid_actions = get_valid_actions(state.game_state)
-
-        # Add the state and tree object to dictionary
-        # if tree.player == "main":
-        #     nodes = add_state_tree_to_external(nodes, tree)
 
         # Keep going down tree until a node with no children is found
         while tree.children:
@@ -206,19 +193,11 @@ class MCTS():
                 child.state = State.from_game_state(next_game_state)
                 # Add the state and tree object to dictionary
                 child.valid_actions = get_valid_actions(child.state.game_state)
-                # if tree.player == "main":
-                #     nodes = add_state_tree_to_external(nodes, tree)
             tree = child        
 
         # Now tree is assumed to be a leaf node
         # Check if the node has been traversed
         if tree.visit == 0:
-            # print(f"==>> tree.state: {tree.state.state_info}")
-            # main_hole_cards = tree.state.game_state["table"].seats.players[0].hole_card
-            # opp_hole_cards = tree.state.game_state["table"].seats.players[1].hole_card
-            # community_cards = tree.state.game_state["table"].get_community_card()
-            # heuristic = self.hand_evaluator.eval_hand(main_hole_cards, community_cards) - self.hand_evaluator.eval_hand(opp_hole_cards, community_cards)
-            # print(heuristic)
             # Sometimes this happens
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
@@ -227,19 +206,11 @@ class MCTS():
                 # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
                 for rollout in range(self.num_rollouts):
                     reward.append(self.rollout(tree.state, self.emulator))
-                # avg_reward = sum(rewards) / len(rewards)
-                # reward = avg_reward
+
         else:
-            # if tree.state.game_state["table"].seats.players[0].hole_card != []:
-            #     main_hole_cards = tree.state.game_state["table"].seats.players[0].hole_card
-            #     opp_hole_cards = tree.state.game_state["table"].seats.players[1].hole_card
-            #     community_cards = tree.state.game_state["table"].get_community_card()
-            #     heuristic = self.hand_evaluator.eval_hand(main_hole_cards, community_cards) - self.hand_evaluator.eval_hand(opp_hole_cards, community_cards)
-            #     print(heuristic)
             # If node has been visited, expand the tree and perform rollout
             # NOTE: all children do not have state or valid actions after expansion
             tree.expand(tree.valid_actions)
-            # print("EXPANDED")
 
             # Rollout on first child, other children will eventually get rolled out via UCB1
             action, child_tree = next(iter(tree.children.items()))
@@ -258,10 +229,6 @@ class MCTS():
             tree.state = State.from_game_state(next_game_state)
             tree.valid_actions = get_valid_actions(next_game_state)
 
-            # Add the state and tree object to dictionary
-            # if tree.player == "main":
-            #     nodes = add_state_tree_to_external(nodes, tree)
-
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
@@ -270,17 +237,12 @@ class MCTS():
                 for rollout in range(self.num_rollouts):
                     reward.append(self.rollout(tree.state, self.emulator))
 
-                # avg_reward = sum(rewards) / len(rewards)
-                # reward = avg_reward
-
         # Do backpropogation up the tree
-        # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
         if isinstance(reward, list):
             for r in reward:
                 self.backup(tree, r)
         else:
             self.backup(tree, reward)
-        # print(f"--value:{tree.value}--n:{tree.visit}--parent_action:{tree.action}-children:{tree.children}")
 
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
