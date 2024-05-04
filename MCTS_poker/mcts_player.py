@@ -23,7 +23,7 @@ class MCTSPlayer(BasePokerPlayer):
                 return pickle.load(f)
 
         def load_nodes():
-            with open('/nas/ucb/mason/AI-Poker-Agent/search_tree_40000000_sorted.json', 'r') as f:
+            with open('search_tree_4500000_reinvigoration-1000.json', 'r') as f:
             # with open('/nas/ucb/mason/AI-Poker-Agent/search_tree_40M_sorted.json', 'r') as f:
                 state_actions = json.load(f)
             return state_actions
@@ -33,9 +33,9 @@ class MCTSPlayer(BasePokerPlayer):
         self.in_table = 0
         self.not_in_table = 0
         # Load the trained model
-        self.model = load_model('poker_decision_model_embedding.h5')
-        self.card_encoder = load_encoder("./MCTS_poker/mlp/card_encoder.pkl")
-        self.action_encoder = load_encoder("./MCTS_poker/mlp/action_encoder.pkl")
+        # self.model = load_model('poker_decision_model_embedding.h5')
+        # self.card_encoder = load_encoder("./MCTS_poker/mlp/card_encoder.pkl")
+        # self.action_encoder = load_encoder("./MCTS_poker/mlp/action_encoder.pkl")
 
 
     def declare_action(self, valid_actions, hole_card, round_state):
