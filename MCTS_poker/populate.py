@@ -58,7 +58,7 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 explore=100,
+                 explore=120,
                  n_particles=8):
 
         self.explore = explore
@@ -70,8 +70,8 @@ class MCTS():
         # self.timeout = 5000
         # self.timeout = 200_000
         # self.timeout = 4_500_000
-        # self.timeout = 1_000_000
-        self.timeout = 10_000_000
+        self.timeout = 1_000_000
+        # self.timeout = 10_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 10
 
