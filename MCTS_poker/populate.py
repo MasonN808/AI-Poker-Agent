@@ -20,15 +20,10 @@ from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
 from tqdm import tqdm
-# from pathos.pools import ParallelPool as Pool
-from pathos.multiprocessing import ProcessingPool as Pool
-# from pathos.threading import ThreadPool as Pool
-# from pathos.pools import ProcessPool
 
 
 nodes = {}
 state_actions = {}
-pool = Pool(nodes=10)
 
 class SearchTree:
     def __init__(self, player = None, state=None, action=None, visit=0, value=0, parent=None):
@@ -66,7 +61,7 @@ class MCTS():
                  discount=0.8,
                  depth=0,
                  epsilon=1e-7,
-                 explore=7,
+                 explore=20,
                  n_particles=128):
 
         self.discount = discount
@@ -79,11 +74,12 @@ class MCTS():
 
         self.num_rollouts = 1
         # self.timeout = 5000
-        self.timeout = 200_000
+        # self.timeout = 200_000
         # self.timeout = 4_500_000
-        # self.timeout = 2_000_000
+        # self.timeout = 1_000_000
+        self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 1000
+        self.reinvigoration = 10
 
     # Search module
     def search(self, state=None):
@@ -114,8 +110,13 @@ class MCTS():
                          (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet is the same
                 # TODO: Figure out this assertion
                 # assert len(trees) <= 1, "Tree should only be one, otherwise, we have duplicate states in dictionary NOT GOOD!"
+                # These trees are our belief states
                 if len(trees) >= 1:
-                    while trees:
+                    max_value = 128
+                    current_value = 0
+                    # Upperboud the while loop to prevent hangs
+                    while trees and current_value < max_value:
+                        current_value += 1
                         self.simulate(state, trees.pop())
                     # Sample from the start state every n simulations
                     if t % self.reinvigoration == 0:
@@ -123,9 +124,10 @@ class MCTS():
                     # Skip outside simulate
                     continue
                 else:
-                    # assert len(trees) != 0, "Length of trees should never be 0!"
+                    # There are no belief states so just make a new tree
                     tree = SearchTree(player=player, state=state, action=None, parent=None)
             else:
+                # There are no entries of state info in nodes so do this
                 tree = SearchTree(player=player, state=state, action=None, parent=None)
 
             self.simulate(state, tree)
@@ -214,16 +216,7 @@ class MCTS():
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
-                reward = []
-                # pool.restart()
-                state_args = [tree.state for _ in range(self.num_rollouts)]
-                emulator_args = [self.emulator for _ in range(self.num_rollouts)]
-                reward = pool.map(self.rollout, state_args, emulator_args)
-                # pool.close()
-                # pool.join()
-                # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
-                # for rollout in range(self.num_rollouts):
-                #     reward.append(self.rollout(tree.state, self.emulator))
+                reward = self.rollout(tree.state, self.emulator)
 
         else:
             # If node has been visited, expand the tree and perform rollout
@@ -250,23 +243,10 @@ class MCTS():
             if tree.state.game_state["table"].seats.players[0].hole_card == []:
                 reward = 0
             else:
-                reward = []
-                # pool.restart()
-                state_args = [tree.state for _ in range(self.num_rollouts)]
-                emulator_args = [self.emulator for _ in range(self.num_rollouts)]
-                reward = pool.map(self.rollout, state_args, emulator_args)
-                # pool.close()
-                # pool.join()
-                # Instead of doing 1 rollout, we do many since we are limited on memory but not compute
-                # for rollout in range(self.num_rollouts):
-                #     reward.append(self.rollout(tree.state, self.emulator))
+                reward = self.rollout(tree.state, self.emulator)
 
         # Do backpropogation up the tree
-        if isinstance(reward, list):
-            for r in reward:
-                self.backup(tree, r)
-        else:
-            self.backup(tree, reward)
+        self.backup(tree, reward)
 
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
@@ -319,7 +299,8 @@ if __name__ == '__main__':
     time_out = mcts.timeout
     reinvigoration = mcts.reinvigoration
     num_rollouts = mcts.num_rollouts
+    explore = mcts.explore
        
-    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}__reinvigoration-{num_rollouts}.json', 'w') as f:
+    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)
