@@ -61,7 +61,7 @@ class MCTS():
                  discount=0.8,
                  depth=0,
                  epsilon=1e-7,
-                 explore=20,
+                 explore=100,
                  n_particles=128):
 
         self.discount = discount
@@ -200,6 +200,10 @@ class MCTS():
         # Keep going down tree until a node with no children is found
         while tree.children:
             # Replace current node with the child that maximized UCB1(s) value
+            for child in tree.children.values():
+                print(f"==>> child.value: {child.value}")
+                print(f"==>> tree.ucb(child): {tree.ucb(child)}")
+                print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
             child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
