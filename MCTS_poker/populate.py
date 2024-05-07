@@ -77,11 +77,12 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        self.num_rollouts = 10
-        self.timeout = 5000
+        self.num_rollouts = 5
+        # self.timeout = 5000
         # self.timeout = 200_000
+        self.timeout = 1_000_000
         # self.timeout = 4_500_000
-        # self.timeout = 2_00_000
+        # self.timeout = 2_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 1000
 
@@ -318,7 +319,8 @@ if __name__ == '__main__':
     nodes = mcts.search()
     time_out = mcts.timeout
     reinvigoration = mcts.reinvigoration
+    num_rollouts = mcts.num_rollouts
        
-    # with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}.json', 'w') as f:
-    with open(f'test.json', 'w') as f:
+    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}__reinvigoration-{num_rollouts}.json', 'w') as f:
+    # with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)
