@@ -133,9 +133,24 @@ def add_state_tree_to_external(nodes: dict, tree) -> dict:
     # Sort the cards just in case
     sorted_card_str = sort_cards(tree.state.state_info)
     # Check if already in dict to append to list
+    assert tree.player == "main", "Added trees should be from main player"
     if sorted_card_str in nodes:
-        # if tree nodes[sorted_card_str]:
-        nodes[sorted_card_str].append(tree)
+        # Loop through all saved trees
+        is_unique = True
+        # print(len(nodes[sorted_card_str]))
+        for nodes_tree in nodes[sorted_card_str]:
+            # Sort the opponnets hole cards and remove the suits
+            # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])
+            # print([card for card in sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)])
+            sorted_prunned_opp_hole_cards_nodes = sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)
+            sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(tree.state.game_state["table"].seats.players[1].hole_card)
+            # If the opponnet has the same hole cards as a tree in the nodes tree then break and dont add the tree to the trees list
+            # TODO: this may be eroneus due to the fact that community cards may never be allocated during the behinning rounds but it may be trivial for our case
+            if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
+                is_unique = False
+                break
+        if is_unique:
+            nodes[sorted_card_str].append(tree)
     else:
         nodes[sorted_card_str] = [tree]
 
@@ -162,6 +177,24 @@ def sort_cards(card_string):
     
     # Combine them back into a string with '|'
     return f"{sorted_community}|{sorted_holes}"
+
+def sort_cards_card_obj(cards: list[Card]):
+    holes = [card.__str__() for card in cards]
+    removed_suits = remove_suits(holes)
+    ranks_order = {str(n): n for n in range(2, 10)}
+    ranks_order.update({'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '0': 15})
+    
+    def card_key(card):
+        # Extract rank
+        rank = card[0]
+        # suit, rank = card[0], card[1:]
+        return (ranks_order[rank])
+    
+    # Sort community and hole cards
+    sorted_holes = sorted((removed_suits[i:i+1][0] for i in range(0, len(removed_suits))), key=card_key)
+    
+    # Combine them back into a string with '|'
+    return sorted_holes
 
 def remove_suits(cards: list[str]) -> list[str]:
     new_cards = []
