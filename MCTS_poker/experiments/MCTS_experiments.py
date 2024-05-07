@@ -1,3 +1,4 @@
+
 import math
 import sys
 
@@ -38,36 +39,21 @@ def testperf(agent_name1, agent1, agent_name2, agent2):
 	# Setting configuration
 	config = setup_config(max_round=max_round, initial_stack=initial_stack, small_blind_amount=smallblind_amount)
 	
-
-# 	==>> self.in_table: 14158
-# ==>> self.not_in_table: 36163
 	# Register players
-	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_1000000_reinvigoration-1000__reinvigoration-5.json'))
-	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-1000__reinvigoration-5.json'))
 	config.register_player(name="MCTS", algorithm=MCTSPlayer())
-	config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
-	# config.register_player(name="MCTS", algorithm=MCTSPlayer())
-	# config.register_player(name="Raised", algorithm=RaisedPlayer())
-	# config.register_player(name="Random", algorithm=RandomPlayer())
+	# config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
+	config.register_player(name="Raised", algorithm=RaisedPlayer())
 	# config.register_player(name="Random", algorithm=RandomPlayer())
 	# config.register_player(name=agent_name1, algorithm=agent1())
 	# config.register_player(name=agent_name2, algorithm=agent2())
 	
-	agent_1_wins = 0
-	agent_2_wins = 0
+
 	# Start playing num_game games
 	for game in range(1, num_game+1):
-		# print("Game number: ", game)
+		print("Game number: ", game)
 		game_result = start_poker(config, verbose=0)
-		if game_result['players'][0]['stack'] > 1000:
-			agent_1_wins += 1
-		if game_result['players'][1]['stack'] > 1000:
-			agent_2_wins += 1
 		agent1_pot = agent1_pot + game_result['players'][0]['stack']
 		agent2_pot = agent2_pot + game_result['players'][1]['stack']
-
-	print(agent_1_wins)
-	print(agent_2_wins)
 
 	print("\n After playing {} games of {} rounds, the results are: ".format(num_game, max_round))
 	# print("\n Agent 1's final pot: ", agent1_pot)
@@ -89,11 +75,11 @@ def testperf(agent_name1, agent1, agent_name2, agent2):
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('-n1', '--agent_name1', help="Name of agent 1", default="MCTS", type=str)
-    parser.add_argument('-a1', '--agent1', help="Agent 1")    
+    parser.add_argument('-a1', '--agent1', help="Agent 1", default=MCTSPlayer())    
     # parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RAISED", type=str)
     # parser.add_argument('-a2', '--agent2', help="Agent 2", default=RaisedPlayer())    
     parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RANDOM", type=str)
-    parser.add_argument('-a2', '--agent2', help="Agent 2")    
+    parser.add_argument('-a2', '--agent2', help="Agent 2", default=RandomPlayer())    
     args = parser.parse_args()
     return args.agent_name1, args.agent1, args.agent_name2, args.agent2
 

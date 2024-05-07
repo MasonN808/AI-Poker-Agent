@@ -34,12 +34,14 @@ class State:
         game_state_copy = game_state.copy()
         return cls(hole_card_main=hole_cards_main, community_cards=community_cards, state_info=state_info, game_state=game_state_copy)
 
-
     @staticmethod
     def get_state_info_str(hole_cards, community_cards):
+        # REMOVE Suits
+        trimmed_hole_cards = remove_suits(hole_cards)
+        trimmed_community_cards = remove_suits(community_cards)
         # Pad Community cards with 0s
-        community_cards = community_cards + ['00'] * (5 - len(community_cards))
-        state_info = f"{''.join(community_cards)}|{''.join(hole_cards)}"
+        community_cards = trimmed_community_cards + ['0'] * (5 - len(trimmed_community_cards))
+        state_info = f"{''.join(community_cards)}|{''.join(trimmed_hole_cards)}"
         # Sort the card since done when populating dictionary
         sorted_card_string = sort_cards(state_info)
         return sorted_card_string
@@ -140,26 +142,34 @@ def add_state_tree_to_external(nodes: dict, tree) -> dict:
     return nodes
 
 def sort_cards(card_string):
-    suits_order = {'C': 0, 'D': 1, 'H': 2, 'S': 3, '0': 4}
+    # suits_order = {'C': 0, 'D': 1, 'H': 2, 'S': 3, '0': 4}
+    # suits_order = {'0': 4}
     ranks_order = {str(n): n for n in range(2, 10)}
     ranks_order.update({'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '0': 15})
     
     def card_key(card):
         # Extract rank and suit, e.g., 'H5' -> ('H', 5)
-        suit, rank = card[0], card[1:]
-        return (suits_order[suit], ranks_order[rank])
+        rank = card[0]
+        # suit, rank = card[0], card[1:]
+        return (ranks_order[rank])
     
     # Split the string by '|'
     community, holes = card_string.split('|')
     
     # Sort community and hole cards
-    sorted_community = ''.join(sorted((community[i:i+2] for i in range(0, len(community), 2)), key=card_key))
-    sorted_holes = ''.join(sorted((holes[i:i+2] for i in range(0, len(holes), 2)), key=card_key))
+    sorted_community = ''.join(sorted((community[i:i+1] for i in range(0, len(community), 1)), key=card_key))
+    sorted_holes = ''.join(sorted((holes[i:i+1] for i in range(0, len(holes), 1)), key=card_key))
     
     # Combine them back into a string with '|'
     return f"{sorted_community}|{sorted_holes}"
 
+def remove_suits(cards: list[str]) -> list[str]:
+    new_cards = []
+    for card in cards:
+        new_cards.append(card[1]) # Remove the suite
+    return new_cards
+
 if __name__ == "__main__":
-    card_string = "H5H3CK|C3S3"
+    card_string = "53K00|A3"
     sorted_card_string = sort_cards(card_string)
     print(sorted_card_string)  # Output: CKH3H5|C3S3

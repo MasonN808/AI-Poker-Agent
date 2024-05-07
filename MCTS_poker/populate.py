@@ -10,7 +10,7 @@ from pypokerengine.engine.seats import Seats
 from pypokerengine.players import BasePokerPlayer
 from pypokerengine.utils.card_utils import gen_cards, estimate_hole_card_win_rate
 # from pypokerengine.api.emulator import apply_action
-from utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions
+from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions
 from pypokerengine.engine.round_manager import RoundManager
 # from pypokerengine.engine.hand_evaluator import eval_hand
 from pypokerengine.utils.game_state_utils import restore_game_state
@@ -77,10 +77,16 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
+<<<<<<< HEAD
         self.num_rollouts = 5
         # self.timeout = 5000
         # self.timeout = 200_000
         self.timeout = 1_000_000
+=======
+        self.num_rollouts = 1
+        # self.timeout = 5000
+        self.timeout = 200_000
+>>>>>>> 76cac56536c7b60ac7f4922722ea96df6233a303
         # self.timeout = 4_500_000
         # self.timeout = 2_000_000
         # self.timeout = 50_000_000

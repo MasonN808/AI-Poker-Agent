@@ -242,10 +242,10 @@ if __name__ == '__main__':
         pp.pprint([str(i) for i in game_state["table"].seats.players[0].hole_card])
         pp.pprint([str(i) for i in game_state["table"].seats.players[1].hole_card])
         print("------------EVENTS----------")
-        # pp.pprint(events)
         end_game_state, events = emulator.run_until_round_finish(game_state)
-        pp.pprint([str(i) for i in end_game_state["table"].seats.players[0].hole_card])
-        pp.pprint([str(i) for i in end_game_state["table"].seats.players[1].hole_card])
+        pp.pprint(events)
+        # pp.pprint([str(i) for i in end_game_state["table"].seats.players[0].hole_card])
+        # pp.pprint([str(i) for i in end_game_state["table"].seats.players[1].hole_card])
 
         # RoundManager.apply_action(game_state, )
 
