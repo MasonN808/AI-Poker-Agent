@@ -77,16 +77,9 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-<<<<<<< HEAD
-        self.num_rollouts = 5
-        # self.timeout = 5000
-        # self.timeout = 200_000
-        self.timeout = 1_000_000
-=======
         self.num_rollouts = 1
         # self.timeout = 5000
         self.timeout = 200_000
->>>>>>> 76cac56536c7b60ac7f4922722ea96df6233a303
         # self.timeout = 4_500_000
         # self.timeout = 2_000_000
         # self.timeout = 50_000_000
