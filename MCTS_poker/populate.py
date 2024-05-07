@@ -58,15 +58,9 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 discount=0.8,
-                 depth=0,
-                 epsilon=1e-7,
                  explore=100,
-                 n_particles=128):
+                 n_particles=8):
 
-        self.discount = discount
-        self.depth = depth
-        self.epsilon = epsilon
         self.explore = explore
         self.n_particles = n_particles
         self.emulator = None
@@ -104,20 +98,33 @@ class MCTS():
             if state.state_info in nodes and player == "main":
                 # Check if any trees in value-tree list has the same opponent hole card
                 opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
-                # Now get trees that have the same community card and opponnent hole card
-                trees = [tup[1] for tup in opp_hole_cards_and_trees if 
+                # print(opp_hole_cards_and_trees[0][1].state.community_cards == state.community_cards)
+                # print(opp_hole_cards_and_trees[0][0] != state.game_state["table"].seats.players[1].hole_card)
+                # print([card.__str__() for card in state.game_state["table"].seats.players[1].hole_card])
+                # print([card.__str__() for card in opp_hole_cards_and_trees[0][0]])
+                # Now get trees that have the same community card but different opponnent hole card
+                # print(f"==>> len(opp_hole_cards_and_trees): {len(opp_hole_cards_and_trees)}")
+                belief_trees = [tup[1] for tup in opp_hole_cards_and_trees if 
                          (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
-                         (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet is the same
+                         (tup[0] != state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
+                # print(f"==>> belief_trees: {len(belief_trees)}")
+                # assert len(belief_trees) == opp_hole_cards_and_trees
                 # TODO: Figure out this assertion
                 # assert len(trees) <= 1, "Tree should only be one, otherwise, we have duplicate states in dictionary NOT GOOD!"
                 # These trees are our belief states
-                if len(trees) >= 1:
-                    max_value = 128
+                # print(f"==>> len(trees): {len(belief_trees)}")
+                if len(belief_trees) > 0:
                     current_value = 0
                     # Upperboud the while loop to prevent hangs
-                    while trees and current_value < max_value:
+                    while belief_trees and current_value < self.n_particles:
                         current_value += 1
-                        self.simulate(state, trees.pop())
+                        # Select and remove a random element from belief_trees
+                        random_index = random.randint(0, len(belief_trees) - 1)
+                        random_tree = belief_trees.pop(random_index)
+                        # print(state is random_tree.state)
+                        # print(state.state_info)
+                        # print(random_tree.state.state_info)
+                        self.simulate(random_tree.state, random_tree)
                     # Sample from the start state every n simulations
                     if t % self.reinvigoration == 0:
                         state = None 
@@ -192,6 +199,7 @@ class MCTS():
         """
         global nodes
         global pool
+        # print(tree.state.game_state)
 
         assert tree.state != None, "State is None"
         if tree.valid_actions == None:
@@ -200,10 +208,10 @@ class MCTS():
         # Keep going down tree until a node with no children is found
         while tree.children:
             # Replace current node with the child that maximized UCB1(s) value
-            for child in tree.children.values():
-                print(f"==>> child.value: {child.value}")
-                print(f"==>> tree.ucb(child): {tree.ucb(child)}")
-                print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
+            # for child in tree.children.values():
+                # print(f"==>> child.value: {child.value}")
+                # print(f"==>> tree.ucb(child): {tree.ucb(child)}")
+                # print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
             child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
@@ -251,7 +259,7 @@ class MCTS():
 
         # Do backpropogation up the tree
         self.backup(tree, reward)
-
+        # print(tree.state.game_state)
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
         return
