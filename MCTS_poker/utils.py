@@ -138,6 +138,7 @@ def add_state_tree_to_external(nodes: dict, tree) -> dict:
         # Loop through all saved trees
         is_unique = True
         # print(len(nodes[sorted_card_str]))
+        sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(tree.state.game_state["table"].seats.players[1].hole_card)
         for nodes_tree in nodes[sorted_card_str]:
             # Sort the opponnets hole cards and remove the suits
             # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])

@@ -58,8 +58,8 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 explore=120,
-                 n_particles=8):
+                 explore=100,
+                 n_particles=32):
 
         self.explore = explore
         self.n_particles = n_particles
@@ -68,9 +68,9 @@ class MCTS():
 
         self.num_rollouts = 1
         # self.timeout = 5000
-        # self.timeout = 200_000
+        self.timeout = 200_000
         # self.timeout = 4_500_000
-        self.timeout = 1_000_000
+        # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 10
@@ -167,14 +167,15 @@ class MCTS():
 
             # If none of the trees have children perform random action
             if optimal_actions == []:
-                r = rand.random()
-                if r <= 0.5:
-                    action = tree.valid_actions[1]
-                elif r<= 0.9 and len(tree.valid_actions) == 3:
-                    action = tree.valid_actions[2]
-                else:
-                    action = tree.valid_actions[0]
-                state_actions[key] = action
+                # r = rand.random()
+                # if r <= 0.5:
+                #     action = tree.valid_actions[1]
+                # elif r<= 0.9 and len(tree.valid_actions) == 3:
+                #     action = tree.valid_actions[2]
+                # else:
+                #     action = tree.valid_actions[0]
+                # state_actions[key] = action
+                pass
             # Select the action that appears the most amount of times
             else:
                 # Count the occurrences of each element
@@ -313,6 +314,6 @@ if __name__ == '__main__':
     num_rollouts = mcts.num_rollouts
     explore = mcts.explore
        
-    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}.json', 'w') as f:
+    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-belief_state_update.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)
