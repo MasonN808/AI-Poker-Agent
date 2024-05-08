@@ -59,7 +59,7 @@ class MCTS():
     """
     def __init__(self,
                  explore=100,
-                 n_particles=32):
+                 n_particles=128):
 
         self.explore = explore
         self.n_particles = n_particles
@@ -69,11 +69,12 @@ class MCTS():
         self.num_rollouts = 1
         # self.timeout = 5000
         self.timeout = 200_000
+        # self.timeout = 600_000
         # self.timeout = 4_500_000
         # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 10
+        self.reinvigoration = 20
 
     # Search module
     def search(self, state=None):
@@ -183,16 +184,8 @@ class MCTS():
                     action = max(tree.children.values(), key=lambda child: child.value).action
                     optimal_actions.append(action)
 
-            # If none of the trees have children perform random action
+            # If none of the trees have children rely on heursitic policy
             if optimal_actions == []:
-                # r = rand.random()
-                # if r <= 0.5:
-                #     action = tree.valid_actions[1]
-                # elif r<= 0.9 and len(tree.valid_actions) == 3:
-                #     action = tree.valid_actions[2]
-                # else:
-                #     action = tree.valid_actions[0]
-                # state_actions[key] = action
                 pass
             # Select the action that appears the most amount of times
             else:
@@ -328,9 +321,9 @@ if __name__ == '__main__':
     nodes = mcts.search()
     time_out = mcts.timeout
     reinvigoration = mcts.reinvigoration
-    num_rollouts = mcts.num_rollouts
+    n_particles = mcts.n_particles
     explore = mcts.explore
        
-    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-belief_state_update.json', 'w') as f:
+    with open(f'tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-n_particles-{n_particles}.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)
