@@ -58,8 +58,8 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 explore=120,
-                 n_particles=8):
+                 explore=100,
+                 n_particles=32):
 
         self.explore = explore
         self.n_particles = n_particles
@@ -68,9 +68,9 @@ class MCTS():
 
         self.num_rollouts = 1
         # self.timeout = 5000
-        # self.timeout = 200_000
+        self.timeout = 200_000
         # self.timeout = 4_500_000
-        self.timeout = 1_000_000
+        # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 10
@@ -78,6 +78,7 @@ class MCTS():
     # Search module
     def search(self, state=None):
         global nodes
+
         # NOTE: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
         # Repeat Simulations until timeout
         for t in tqdm(range(self.timeout), desc='Progress'):
@@ -93,20 +94,36 @@ class MCTS():
                 player = "main"
             else:
                 player = "opp"
-            
+
             # Check if state info is a key in nodes to avoid creating unnecessary new tree objects
             if state.state_info in nodes and player == "main":
+                # TODO: tree and state opponnet hole cards are different here!!!!!! ISSUE probably in how were adding nodes to external nodes dictionary
+                # print(t)
+                # print(f"==>> tree.state.state_info: {tree.state.state_info}")
+                # print(f"==>> state.state_info: {state.state_info}")
+                # print([card.__str__() for card in tree.state.game_state["table"].seats.players[1].hole_card])
+                # print([card.__str__() for card in tree.state.game_state["table"].seats.players[0].hole_card])
+                # print([card.__str__() for card in state.game_state["table"].seats.players[1].hole_card])
+                # print([card.__str__() for card in state.game_state["table"].seats.players[0].hole_card])
+                # assert tree.state.state_info == state.state_info
+
                 # Check if any trees in value-tree list has the same opponent hole card
-                opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
+                # opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
                 # print(opp_hole_cards_and_trees[0][1].state.community_cards == state.community_cards)
                 # print(opp_hole_cards_and_trees[0][0] != state.game_state["table"].seats.players[1].hole_card)
                 # print([card.__str__() for card in state.game_state["table"].seats.players[1].hole_card])
                 # print([card.__str__() for card in opp_hole_cards_and_trees[0][0]])
                 # Now get trees that have the same community card but different opponnent hole card
                 # print(f"==>> len(opp_hole_cards_and_trees): {len(opp_hole_cards_and_trees)}")
-                belief_trees = [tup[1] for tup in opp_hole_cards_and_trees if 
-                         (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
-                         (tup[0] != state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
+
+                # opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
+                # belief_trees = [tup[1] for tup in opp_hole_cards_and_trees if 
+                #          (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
+                #          (tup[0] != state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
+
+                belief_trees = copy.copy(nodes[state.state_info])
+                # belief_trees = nodes[state.state_info]
+                # print(len(belief_trees))
                 # print(f"==>> belief_trees: {len(belief_trees)}")
                 # assert len(belief_trees) == opp_hole_cards_and_trees
                 # TODO: Figure out this assertion
@@ -114,6 +131,7 @@ class MCTS():
                 # These trees are our belief states
                 # print(f"==>> len(trees): {len(belief_trees)}")
                 if len(belief_trees) > 0:
+                    # print(len(belief_trees))
                     current_value = 0
                     # Upperboud the while loop to prevent hangs
                     while belief_trees and current_value < self.n_particles:
@@ -124,7 +142,7 @@ class MCTS():
                         # print(state is random_tree.state)
                         # print(state.state_info)
                         # print(random_tree.state.state_info)
-                        self.simulate(random_tree.state, random_tree)
+                        self.simulate(random_tree)
                     # Sample from the start state every n simulations
                     if t % self.reinvigoration == 0:
                         state = None 
@@ -137,7 +155,7 @@ class MCTS():
                 # There are no entries of state info in nodes so do this
                 tree = SearchTree(player=player, state=state, action=None, parent=None)
 
-            self.simulate(state, tree)
+            self.simulate(tree)
 
             # Sample from the start state every n simulations
             if t % self.reinvigoration == 0:
@@ -167,14 +185,15 @@ class MCTS():
 
             # If none of the trees have children perform random action
             if optimal_actions == []:
-                r = rand.random()
-                if r <= 0.5:
-                    action = tree.valid_actions[1]
-                elif r<= 0.9 and len(tree.valid_actions) == 3:
-                    action = tree.valid_actions[2]
-                else:
-                    action = tree.valid_actions[0]
-                state_actions[key] = action
+                # r = rand.random()
+                # if r <= 0.5:
+                #     action = tree.valid_actions[1]
+                # elif r<= 0.9 and len(tree.valid_actions) == 3:
+                #     action = tree.valid_actions[2]
+                # else:
+                #     action = tree.valid_actions[0]
+                # state_actions[key] = action
+                pass
             # Select the action that appears the most amount of times
             else:
                 # Count the occurrences of each element
@@ -193,25 +212,24 @@ class MCTS():
                 
         return state_actions
 
-    def simulate(self, state, tree):
+    def simulate(self, tree):
         """
         Simulation performed using the UCT Algorithm
         """
         global nodes
-        global pool
         # print(tree.state.game_state)
 
         assert tree.state != None, "State is None"
         if tree.valid_actions == None:
-            tree.valid_actions = get_valid_actions(state.game_state)
+            tree.valid_actions = get_valid_actions(tree.state.game_state)
 
         # Keep going down tree until a node with no children is found
         while tree.children:
             # Replace current node with the child that maximized UCB1(s) value
             # for child in tree.children.values():
-                # print(f"==>> child.value: {child.value}")
-                # print(f"==>> tree.ucb(child): {tree.ucb(child)}")
-                # print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
+            #     print(f"==>> child.value: {child.value}")
+            #     print(f"==>> tree.ucb(child): {tree.ucb(child)}")
+            #     print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
             child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
@@ -313,6 +331,6 @@ if __name__ == '__main__':
     num_rollouts = mcts.num_rollouts
     explore = mcts.explore
        
-    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}.json', 'w') as f:
+    with open(f'search_tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-belief_state_update.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
         json.dump(nodes, f, indent=4)
