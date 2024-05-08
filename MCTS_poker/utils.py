@@ -136,25 +136,29 @@ def add_state_tree_to_external(nodes: dict, tree) -> dict:
     # Check if already in dict to append to list
     assert tree.player == "main", "Added trees should be from main player"
     if sorted_card_str in nodes:
-        # Loop through all saved trees
-        is_unique = True
-        # print(nodes)
-        # print((nodes[sorted_card_str]))
-        sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(tree.state.game_state["table"].seats.players[1].hole_card)
-        for nodes_tree in nodes[sorted_card_str]:
-            # print(len(nodes[sorted_card_str]))
-            # Sort the opponnets hole cards and remove the suits
-            # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])
-            # print([card for card in sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)])
-            sorted_prunned_opp_hole_cards_nodes = sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)
-            # If the opponnet has the same hole cards as a tree in the nodes tree then break and dont add the tree to the trees list
-            # TODO: this may be eroneus due to the fact that community cards may never be allocated during the behinning rounds but it may be trivial for our case
-            if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
-                # print("IS UNIQUE")
-                is_unique = False
-                break
-        if is_unique:
-            nodes[sorted_card_str].append(tree)
+        # This is to reduce memory consraints
+        if len(nodes[sorted_card_str]) < 256:
+            # Loop through all saved trees
+            is_unique = True
+            # print(nodes)
+            # print((nodes[sorted_card_str]))
+
+            # Loop through all current belief states
+            sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(tree.state.game_state["table"].seats.players[1].hole_card)
+            for nodes_tree in nodes[sorted_card_str]:
+                # print(len(nodes[sorted_card_str]))
+                # Sort the opponnets hole cards and remove the suits
+                # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])
+                # print([card for card in sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)])
+                sorted_prunned_opp_hole_cards_nodes = sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)
+                # If the opponnet has the same hole cards as a tree in the nodes tree then break and dont add the tree to the trees list
+                # TODO: this may be eroneus due to the fact that community cards may never be allocated during the behinning rounds but it may be trivial for our case
+                if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
+                    # print("IS UNIQUE")
+                    is_unique = False
+                    break
+            if is_unique:
+                nodes[sorted_card_str].append(tree)
     else:
         nodes[sorted_card_str] = [tree]
 
