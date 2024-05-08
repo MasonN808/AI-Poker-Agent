@@ -59,7 +59,7 @@ class MCTS():
     """
     def __init__(self,
                  explore=100,
-                 n_particles=32):
+                 n_particles=1):
 
         self.explore = explore
         self.n_particles = n_particles
@@ -119,9 +119,12 @@ class MCTS():
                 # opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
                 # belief_trees = [tup[1] for tup in opp_hole_cards_and_trees if 
                 #          (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
-                #          (tup[0] != state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
+                #          (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
 
-                belief_trees = copy.copy(nodes[state.state_info])
+                # belief_trees = copy.copy(nodes[state.state_info])
+                # belief_trees = copy.copy(nodes[state.state_info])
+                belief_trees = nodes[state.state_info]
+
                 # belief_trees = nodes[state.state_info]
                 # print(len(belief_trees))
                 # print(f"==>> belief_trees: {len(belief_trees)}")
@@ -138,7 +141,7 @@ class MCTS():
                         current_value += 1
                         # Select and remove a random element from belief_trees
                         random_index = random.randint(0, len(belief_trees) - 1)
-                        random_tree = belief_trees.pop(random_index)
+                        random_tree = belief_trees[random_index]
                         # print(state is random_tree.state)
                         # print(state.state_info)
                         # print(random_tree.state.state_info)
