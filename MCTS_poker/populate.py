@@ -48,7 +48,7 @@ class SearchTree:
 
             # reward = 
             # if action == "fold":
-                # self.children[action] = SearchTree(player=player, action=action, parent=self)
+            #     self.children[action] = SearchTree(player=player, action=action, parent=self)
             # else:
             self.children[action] = SearchTree(player=player, action=action, parent=self)
 
@@ -63,7 +63,7 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 explore=150,
+                 explore=200,
                  n_particles=91): # Max is 91 in theory
 
         self.explore = explore
@@ -71,16 +71,16 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        self.num_rollouts = 1
-        # self.timeout = 5000
+        self.timeout = 20000
         # self.timeout = 50000
         # self.timeout = 500_000
+        # self.timeout = 200_000
         # self.timeout = 600_000
         # self.timeout = 4_500_000
-        self.timeout = 1_000_000
+        # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 10
+        self.reinvigoration = 10000
 
     # Search module
     def search(self, state=None):
@@ -91,6 +91,9 @@ class MCTS():
                 # Sample an initial state (observation) and get the initialized pypoker emulator
                 state_instance = State()
                 state, self.emulator = state_instance.random_state()  # s ~ I(s_0=s)
+            else:
+                state_instance = State()
+                state, self.emulator = state_instance.random_state(state)  # s ~ B(s_0=s)
             # print(f"==>> state: {state.state_info}")
             assert not is_round_finish(state.game_state)
             if state.game_state['next_player'] == 1:
@@ -117,10 +120,17 @@ class MCTS():
                     tree = SearchTree(player=player, state=state, action=None, parent=None)
                     self.simulate(tree)
 
+                    # Sample from the start state every n simulations
+                    # if (t + 1) % self.reinvigoration == 0:
+                    #     state = None 
+                    # Skip outside simulate
+                    # continue
+
                 # if state.game_state
 
 
                 belief_trees = nodes[state.state_info]
+                # print(len(belief_trees))
 
                 traversed_belief_trees = []
                 if len(belief_trees) > 0:
@@ -181,11 +191,12 @@ class MCTS():
                 assert tree.state.state_info == key
 
                 # If node has no children, take a random action
-                if tree.children == {} or tree.visit < 2:
+                if tree.children == {}:
                     pass
                 else:
-                    action = max(tree.children.values(), key=lambda child: child.value).action
-                    optimal_actions.append(action)
+                    if tree.player == "main":
+                        action = max(tree.children.values(), key=lambda child: child.value).action
+                        optimal_actions.append(action)
 
             # If none of the trees have children rely on heursitic policy
             if optimal_actions == []:
@@ -197,8 +208,12 @@ class MCTS():
 
                 # Find the maximum count
                 max_count = max(counter.values())
+                print(key)
+                print(max_count)
+                
 
                 most_common_actions = [element for element, count in counter.items() if count == max_count]
+                print(most_common_actions)
 
                 random_most_common_action = random.choice(most_common_actions)
 
@@ -220,15 +235,31 @@ class MCTS():
 
         # Keep going down tree until a node with no children is found
         while tree.children:
+            
             # Replace current node with the child that maximized UCB1(s) value
             # Do not traverse the fold node since the result if deterministic given the game tree
-            child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child) if child.action != "fold" else -100000)
+            # if tree.player == "main":
+            #     child = max(tree.children.values(), key=lambda child: (child.value + self.explore * tree.ucb(child)) if child.action != "fold" else -100000)
+            # else:
+            #     child = min(tree.children.values(), key=lambda child: (child.value + self.explore * tree.ucb(child)) if child.action != "fold" else 100000)
+
+            valid_children = {key: child for key, child in tree.children.items() if child.action != "fold"}
+            if tree.player == "main":
+                # Exclude children with 'fold' action or use float('-inf') as a deterrent
+                if valid_children:
+                    child = max(valid_children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
+            else:
+                if valid_children:
+                    child = min(valid_children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
+
+            # print(child.value)
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
                 next_game_state , _ = from_state_action_to_state(self.emulator, tree.state.game_state, child.action)
                 child.state = State.from_game_state(next_game_state)
                 # Add the state and tree object to dictionary
                 child.valid_actions = get_valid_actions(child.state.game_state)
+            # print(f"==>> child.value: {child.state.state_info}-{child.action}-{child.value} ")
             tree = child        
 
         # Now tree is assumed to be a leaf node
@@ -237,6 +268,7 @@ class MCTS():
             reward = self.rollout(tree.state, self.emulator)
 
         else:
+            # print(tree.visit)
             if is_round_finish(tree.state.game_state):
                 cur_stack = 1000
                 # How much the main player gained or lost
@@ -286,6 +318,10 @@ class MCTS():
             # Assign negative reward to Opponent
             # Alternate the reward for 0-sum 2-player poker
             # NOTE:  (reward - tree.value)/tree.visit from POMCP Paper
+            # if tree.player == "opp":
+            #     tree.value = tree.value + reward
+            # else:
+            #     tree.value = tree.value - reward
             if tree.player == "opp":
                 tree.value = tree.value + (reward - tree.value)/tree.visit
             else:

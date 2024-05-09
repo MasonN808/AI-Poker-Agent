@@ -46,48 +46,93 @@ class State:
         sorted_card_string = sort_cards(state_info)
         return sorted_card_string
     
-    def random_state(self):
+    def random_state(self, state=None):
         """
         Generates a random state of the game.
         Since we can't initialize a game state along with the player's hoe cards, we do a hacky version
         """
-        num_player = 2
-        max_round = 10000000000
-        small_blind_amount = 10
-        ante = 0 
-        emulator = Emulator()
-        emulator.set_game_rule(num_player, max_round, small_blind_amount, ante)
+        if state==None:
+            num_player = 2
+            max_round = 10000000000
+            small_blind_amount = 10
+            ante = 0 
+            emulator = Emulator()
+            emulator.set_game_rule(num_player, max_round, small_blind_amount, ante)
 
-        # 2. Setup GameState object
-        p1_uuid = "uuid-1"
-        p1_model = RandomPlayer(p1_uuid)
-        emulator.register_player(p1_uuid, p1_model)
-        p2_uuid = "uuid-2"
-        p2_model = RandomPlayer(p2_uuid)
-        emulator.register_player(p2_uuid, p2_model)
-        players_info = {
-            "uuid-1": { "name": "POMCP", "stack": 1000 },
-            "uuid-2": { "name": "RANDOM", "stack": 1000 },
-        }
+            # 2. Setup GameState object
+            p1_uuid = "uuid-1"
+            p1_model = RandomPlayer(p1_uuid)
+            emulator.register_player(p1_uuid, p1_model)
+            p2_uuid = "uuid-2"
+            p2_model = RandomPlayer(p2_uuid)
+            emulator.register_player(p2_uuid, p2_model)
+            players_info = {
+                "uuid-1": { "name": "POMCP", "stack": 1000 },
+                "uuid-2": { "name": "RANDOM", "stack": 1000 },
+            }
 
-        # Initializes the initial game state without dealing
-        initial_state = emulator.generate_initial_game_state(players_info)
-        # Actually starts the round and is now a player's turn
-        # Hoe cards have been distributed, but not community cards
-        game_state, events = emulator.start_new_round(initial_state)
+            # Initializes the initial game state without dealing
+            initial_state = emulator.generate_initial_game_state(players_info)
+            # Actually starts the round and is now a player's turn
+            # Hoe cards have been distributed, but not community cards
+            game_state, events = emulator.start_new_round(initial_state)
 
-        hole_cards_main = [str(i) for i in game_state["table"].seats.players[0].hole_card]
+            hole_cards_main = [str(i) for i in game_state["table"].seats.players[0].hole_card]
 
-        # Create instance first then use it to call get_state_info_str
-        self.hole_cards = hole_cards_main
-        # print(f"==>> self.hole_cards: {self.hole_cards}")
+            # Create instance first then use it to call get_state_info_str
+            self.hole_cards = hole_cards_main
+            # print(f"==>> self.hole_cards: {self.hole_cards}")
 
-        self.community_cards = []
-        self.state_info = self.get_state_info_str(self.hole_cards, [])
-        self.game_state = game_state
+            self.community_cards = []
+            self.state_info = self.get_state_info_str(self.hole_cards, [])
+            self.game_state = game_state
 
-        # Community cards is empty
-        return self, emulator
+            # Community cards is empty
+            return self, emulator
+        
+        else:
+
+            num_player = 2
+            max_round = 10000000000
+            small_blind_amount = 10
+            ante = 0 
+            emulator = Emulator()
+            emulator.set_game_rule(num_player, max_round, small_blind_amount, ante)
+
+            # 2. Setup GameState object
+            p1_uuid = "uuid-1"
+            p1_model = RandomPlayer(p1_uuid)
+            emulator.register_player(p1_uuid, p1_model)
+            p2_uuid = "uuid-2"
+            p2_model = RandomPlayer(p2_uuid)
+            emulator.register_player(p2_uuid, p2_model)
+            players_info = {
+                "uuid-1": { "name": "POMCP", "stack": 1000 },
+                "uuid-2": { "name": "RANDOM", "stack": 1000 },
+            }
+
+            # Initializes the initial game state without dealing
+            initial_state = emulator.generate_initial_game_state(players_info)
+            # Actually starts the round and is now a player's turn
+            # Hoe cards have been distributed, but not community cards
+            game_state, events = emulator.start_new_round(initial_state)
+
+            hole_cards_main = [str(i) for i in state.game_state["table"].seats.players[0].hole_card]
+
+            # set the main players hole cards
+            game_state["table"].seats.players[0].hole_card = state.game_state["table"].seats.players[0].hole_card
+            
+
+            # Create instance first then use it to call get_state_info_str
+            self.hole_cards = hole_cards_main
+            # print(f"==>> self.hole_cards: {self.hole_cards}")
+
+            self.community_cards = []
+            self.state_info = self.get_state_info_str(self.hole_cards, [])
+            self.game_state = game_state
+
+            # Community cards is empty
+            return self, emulator
 
     def matches(self, hole_card_main=None, community_cards=None):
         if hole_card_main is not None and self.hole_card_main != hole_card_main:
