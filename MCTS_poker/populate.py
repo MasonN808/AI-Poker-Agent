@@ -5,15 +5,9 @@ import math
 import sys
 
 sys.path.insert(0, './')
-from pypokerengine.engine.table import Table
-from pypokerengine.engine.seats import Seats
-from pypokerengine.players import BasePokerPlayer
-from pypokerengine.utils.card_utils import gen_cards, estimate_hole_card_win_rate
 # from pypokerengine.api.emulator import apply_action
 from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions, sort_cards, sort_cards_card_obj
-from pypokerengine.engine.round_manager import RoundManager
 # from pypokerengine.engine.hand_evaluator import eval_hand
-from pypokerengine.utils.game_state_utils import restore_game_state
 from pypokerengine.engine.poker_constants import PokerConstants as Const
 from pypokerengine.engine.hand_evaluator import HandEvaluator
 from pypokerengine.api.emulator import Emulator
@@ -80,7 +74,7 @@ class MCTS():
         # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 10000
+        self.reinvigoration = 20000
 
     # Search module
     def search(self, state=None):
@@ -208,12 +202,12 @@ class MCTS():
 
                 # Find the maximum count
                 max_count = max(counter.values())
-                print(key)
-                print(max_count)
+                # print(key)
+                # print(max_count)
                 
 
                 most_common_actions = [element for element, count in counter.items() if count == max_count]
-                print(most_common_actions)
+                # print(most_common_actions)
 
                 random_most_common_action = random.choice(most_common_actions)
 
@@ -238,11 +232,6 @@ class MCTS():
             
             # Replace current node with the child that maximized UCB1(s) value
             # Do not traverse the fold node since the result if deterministic given the game tree
-            # if tree.player == "main":
-            #     child = max(tree.children.values(), key=lambda child: (child.value + self.explore * tree.ucb(child)) if child.action != "fold" else -100000)
-            # else:
-            #     child = min(tree.children.values(), key=lambda child: (child.value + self.explore * tree.ucb(child)) if child.action != "fold" else 100000)
-
             valid_children = {key: child for key, child in tree.children.items() if child.action != "fold"}
             if tree.player == "main":
                 # Exclude children with 'fold' action or use float('-inf') as a deterrent
@@ -331,11 +320,17 @@ class MCTS():
         
     def rollout(self, state: State, emulator: Emulator):
         emulator = copy.copy(emulator)
-        cur_stack = state.game_state["table"].seats.players[0].stack
+        # cur_stack = state.game_state["table"].seats.players[0].stack
+        cur_stack = 1000
+        # print(cur_stack)
+        # cur_stack = 1000
         end_game_state, events = emulator.run_until_round_finish(state.game_state)
         
         # How much the main player gained or lost
+        # This is in range of [-320, 320]
         reward = end_game_state["table"].seats.players[0].stack - cur_stack
+
+        # print(reward)
         return reward
 
     def rollout_hand_eval(self, state: State, emulator: Emulator):
