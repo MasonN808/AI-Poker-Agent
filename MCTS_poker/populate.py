@@ -71,16 +71,16 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        self.timeout = 20000
+        # self.timeout = 200_000
         # self.timeout = 50000
         # self.timeout = 500_000
         # self.timeout = 200_000
         # self.timeout = 600_000
         # self.timeout = 4_500_000
-        # self.timeout = 1_000_000
+        self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 10000
+        self.reinvigoration = 20000
 
     # Search module
     def search(self, state=None):
@@ -287,7 +287,7 @@ class MCTS():
                 if is_round_finish(next_game_state):
                     cur_stack = 1000
                     # How much the main player gained or lost
-                    reward = tree.state.game_state["table"].seats.players[0].stack - cur_stack
+                    reward = next_game_state.game_state["table"].seats.players[0].stack - cur_stack
                 else:
                     tree = child_tree
                     tree.state = State.from_game_state(next_game_state)
@@ -360,6 +360,6 @@ if __name__ == '__main__':
     n_particles = mcts.n_particles
     explore = mcts.explore
        
-    with open(f'tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-n_particles-{n_particles}.json', 'w') as f:
+    with open(f'new-tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-n_particles-{n_particles}.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
         json.dump(state_actions, f, indent=4)
