@@ -2,6 +2,7 @@ import copy
 import random
 import sys
 sys.path.append("./")
+from hand_eval_player import HeuristicPlayer
 from pypokerengine.api.emulator import Emulator
 from pypokerengine.engine.card import Card
 from pypokerengine.engine.deck import Deck
@@ -9,6 +10,8 @@ from pypokerengine.engine.message_builder import MessageBuilder
 from pypokerengine.utils.card_utils import gen_deck, gen_cards
 from randomplayer import RandomPlayer
 from pypokerengine.engine.round_manager import RoundManager
+from pypokerengine.utils.game_state_utils import\
+        restore_game_state, attach_hole_card, attach_hole_card_from_deck
 
 #TODO: Think about ways to make this smarter like configuring the random distributions away from random uniform across all potential values (e.g., skewed gaussian)
 
@@ -61,10 +64,10 @@ class State:
 
             # 2. Setup GameState object
             p1_uuid = "uuid-1"
-            p1_model = RandomPlayer(p1_uuid)
+            p1_model = HeuristicPlayer(p1_uuid)
             emulator.register_player(p1_uuid, p1_model)
             p2_uuid = "uuid-2"
-            p2_model = RandomPlayer(p2_uuid)
+            p2_model = HeuristicPlayer(p2_uuid)
             emulator.register_player(p2_uuid, p2_model)
             players_info = {
                 "uuid-1": { "name": "POMCP", "stack": 1000 },
@@ -101,10 +104,10 @@ class State:
 
             # 2. Setup GameState object
             p1_uuid = "uuid-1"
-            p1_model = RandomPlayer(p1_uuid)
+            p1_model = HeuristicPlayer(p1_uuid)
             emulator.register_player(p1_uuid, p1_model)
             p2_uuid = "uuid-2"
-            p2_model = RandomPlayer(p2_uuid)
+            p2_model = HeuristicPlayer(p2_uuid)
             emulator.register_player(p2_uuid, p2_model)
             players_info = {
                 "uuid-1": { "name": "POMCP", "stack": 1000 },
@@ -119,13 +122,16 @@ class State:
 
             hole_cards_main = [str(i) for i in state.game_state["table"].seats.players[0].hole_card]
 
-            # set the main players hole cards
-            game_state["table"].seats.players[0].hole_card = state.game_state["table"].seats.players[0].hole_card
-            
+            # Set the players hole cards
+            my_hole_card = state.game_state["table"].seats.players[0].hole_card
+            my_uuid = state.game_state["table"].seats.players[0].uuid
+            opp_uuid = state.game_state["table"].seats.players[1].uuid
+            # game_state["table"].seats.players[0].hole_card = my_hole_card
+            game_state = attach_hole_card(game_state, my_uuid, my_hole_card)
+            game_state = attach_hole_card_from_deck(game_state, opp_uuid)
 
             # Create instance first then use it to call get_state_info_str
             self.hole_cards = hole_cards_main
-            # print(f"==>> self.hole_cards: {self.hole_cards}")
 
             self.community_cards = []
             self.state_info = self.get_state_info_str(self.hole_cards, [])
@@ -133,16 +139,6 @@ class State:
 
             # Community cards is empty
             return self, emulator
-
-    def matches(self, hole_card_main=None, community_cards=None):
-        if hole_card_main is not None and self.hole_card_main != hole_card_main:
-            return False
-        if community_cards is not None and self.community_card != community_cards:
-            return False
-        return True
-
-def get_current_player_id(round_state):
-    return round_state['next_player']
 
 def get_valid_actions(game_state: dict) -> list[dict]:
     # Extracted from run_until_round_finish()

@@ -5,56 +5,61 @@ import math
 import sys
 
 sys.path.insert(0, './')
-# from pypokerengine.api.emulator import apply_action
 from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions, sort_cards, sort_cards_card_obj
-# from pypokerengine.engine.hand_evaluator import eval_hand
 from pypokerengine.engine.poker_constants import PokerConstants as Const
 from pypokerengine.engine.hand_evaluator import HandEvaluator
 from pypokerengine.api.emulator import Emulator
-from randomplayer import RandomPlayer
-import random as rand
 from tqdm import tqdm
 
 nodes = {}
 state_actions = {}
 
+# Adpated from https://github.com/cbarrick/POMCP-Blackjack
 class SearchTree:
+    """
+    A node in the search tree
+    """
     def __init__(self, player = None, state=None, action=None, visit=0, value=0, parent=None):
-        self.player: str = player    # "main" or "opp"
-        self.action: str = action    # Action by the opponent that was taken in parent
+        # Possible player strings: "main" or "opp"
+        self.player: str = player
+        # Action taken by parent
+        self.action: str = action   
+        # The parent node 
         self.parent: SearchTree = parent 
-        self.visit: int = visit      # Number of visits
-        self.value: int = value      # Value of node
+        # Number of visitations
+        self.visit: int = visit
+        self.value: int = value
         self.children: dict[SearchTree] = {}
-
-        self.state: State = state          # Observation
+        self.state: State = state
+        # Since valid actions change during game
         self.valid_actions: list[str] = None
-
-        self.my_pot_portion = 0
 
     def expand(self, valid_actions: list[str]):
         assert valid_actions != None, "valid actions should not be none"
         for action in valid_actions:
+            # Alternate the players for children
             if self.player == "main":
                 player = "opp"
             else:
                 player = "main"
 
-            # reward = 
-            # if action == "fold":
-            #     self.children[action] = SearchTree(player=player, action=action, parent=self)
-            # else:
             self.children[action] = SearchTree(player=player, action=action, parent=self)
 
     def ucb(self, child):
+        """
+        Explortation part of the UCB1 Algorithm
+        """
+        # Return a very large number to ensure this node gets selected
         if child.visit == 0:
-            return float('inf')  # Return a very large number to ensure this node gets selected
+            return float('inf')
         else:
             return math.sqrt(math.log(self.visit) / child.visit)
 
+
+# Adapted from https://github.com/cbarrick/POMCP-Blackjack and https://github.com/yhs0602/POMCP
 class MCTS():
     """
-    MCTS for Poker in pypoker engine
+    POMCP for Poker using pypoker engine
     """
     def __init__(self,
                  explore=200,
@@ -86,6 +91,8 @@ class MCTS():
                 state_instance = State()
                 state, self.emulator = state_instance.random_state()  # s ~ I(s_0=s)
             else:
+                # Sample a belief state from a distribution of Belief states
+                # i.e., get a state where the opponent cards change, but yours stays the same
                 state_instance = State()
                 state, self.emulator = state_instance.random_state(state)  # s ~ B(s_0=s)
             # print(f"==>> state: {state.state_info}")
@@ -109,32 +116,20 @@ class MCTS():
                     if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
                         is_unique = False
                         break
-
                 if is_unique:
                     tree = SearchTree(player=player, state=state, action=None, parent=None)
                     self.simulate(tree)
 
-                    # Sample from the start state every n simulations
-                    # if (t + 1) % self.reinvigoration == 0:
-                    #     state = None 
-                    # Skip outside simulate
-                    # continue
 
-                # if state.game_state
-
-
+                # Now, loop through current belief states for current observation and do simulations
                 belief_trees = nodes[state.state_info]
-                # print(len(belief_trees))
-
                 traversed_belief_trees = []
                 if len(belief_trees) > 0:
-                    # print(len(belief_trees))
                     i = 0
                     # Upperboud the while loop to prevent hangs
                     while belief_trees and i < self.n_particles:
                         i += 1
                         # Select and remove a random element from belief_trees
-
                         random_index = random.randint(0, len(belief_trees) - 1)
                         random_tree = belief_trees[random_index]
 
@@ -146,6 +141,7 @@ class MCTS():
                     # Reappend the traversed trees
                     belief_trees = belief_trees + traversed_belief_trees
                     
+                    # Reassign to nodes dic since belief states pointer disappears after abone operations
                     nodes[state.state_info] = belief_trees
 
                     # Reset to save memory
@@ -199,16 +195,9 @@ class MCTS():
             else:
                 # Count the occurrences of each element
                 counter = Counter(optimal_actions)
-
-                # Find the maximum count
+                # Find the maximum count among the elements
                 max_count = max(counter.values())
-                # print(key)
-                # print(max_count)
-                
-
                 most_common_actions = [element for element, count in counter.items() if count == max_count]
-                # print(most_common_actions)
-
                 random_most_common_action = random.choice(most_common_actions)
 
                 state_actions[key] = random_most_common_action
@@ -257,7 +246,6 @@ class MCTS():
             reward = self.rollout(tree.state, self.emulator)
 
         else:
-            # print(tree.visit)
             if is_round_finish(tree.state.game_state):
                 cur_stack = 1000
                 # How much the main player gained or lost
@@ -333,7 +321,7 @@ class MCTS():
         # print(reward)
         return reward
 
-    def rollout_hand_eval(self, state: State, emulator: Emulator):
+    def rollout_hand_eval(self, state: State):
         main_hole_cards = state.game_state["table"].seats.players[0].hole_card
         opp_hole_cards = state.game_state["table"].seats.players[1].hole_card
         community_cards = state.game_state["table"].get_community_card()
