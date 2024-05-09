@@ -50,20 +50,20 @@ class MCTSPlayer(BasePokerPlayer):
         # heuristic = self.hand_evaluator.eval_hand(hole_cards, community_cards)
         # print("{0:b}".format(heuristic))
         # print(heuristic)
+        # exit()
         # 100 0011 0100 0011
         # 1000 0000 1010 0000 1001 1000
-        # exit()
         # Check if current observation is a valid state in search tree
         state = State.get_state_info_str(hole_cards=hole_card, community_cards=round_state["community_card"])
         # print(f"==>> self.in_table: {self.in_table}")
         # print(f"==>> self.not_in_table: {self.not_in_table}")
         if state in self.state_actions.keys():
-            print(f"==>> state IN keys: {state}")
+            # print(f"==>> state IN keys: {state}")
             self.in_table += 1
             return self.state_actions[state]
         else:
         # Do a random action
-            print(f"==>> state NOT in keys: {state}")
+            # print(f"==>> state NOT in keys: {state}")
             self.not_in_table += 1
 
             community_cards = [Card.from_str(str_card) for str_card in round_state["community_card"]]
