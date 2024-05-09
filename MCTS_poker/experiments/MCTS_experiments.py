@@ -1,4 +1,3 @@
-
 import math
 import sys
 
@@ -10,6 +9,8 @@ setup_config = game.setup_config
 start_poker = game.start_poker
 import time
 from argparse import ArgumentParser
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 
 """ =========== *Remember to import your agent!!! =========== """
@@ -24,53 +25,98 @@ from MCTS_poker.mcts_player import MCTSPlayer
 $ python testperf.py -n1 "Random Warrior 1" -a1 RandomPlayer -n2 "Random Warrior 2" -a2 RandomPlayer
 """
 
-def testperf(agent_name1, agent1, agent_name2, agent2):		
+def testperf_and_plot():		
+	meta_data = []
+	for i in range(3):
+		agent_i_stacks = []
+		agent_j_stacks = []
+		for j in range(10):
+			# Init to play 500 games of 1000 rounds
+			num_game = 500
+			max_round = 1000
+			initial_stack = 1000
+			smallblind_amount = 10
 
-	# Init to play 500 games of 1000 rounds
-	num_game = 500
-	max_round = 1000
-	initial_stack = 1000
-	smallblind_amount = 10
+			# Init pot of players
+			agent1_pot = 0
+			agent2_pot = 0
 
-	# Init pot of players
-	agent1_pot = 0
-	agent2_pot = 0
+			# Setting configuration
+			config = setup_config(max_round=max_round, initial_stack=initial_stack, small_blind_amount=smallblind_amount)
+			
+			# Register players
+			if i == 0:
+				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
+			if i == 1:
+				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="Raised", algorithm=RaisedPlayer())
+			if i == 2:
+				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="Random", algorithm=RandomPlayer())
+			
 
-	# Setting configuration
-	config = setup_config(max_round=max_round, initial_stack=initial_stack, small_blind_amount=smallblind_amount)
-	
-	# Register players
-	config.register_player(name="MCTS", algorithm=MCTSPlayer())
-	# config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
-	config.register_player(name="Raised", algorithm=RaisedPlayer())
-	# config.register_player(name="Random", algorithm=RandomPlayer())
-	# config.register_player(name=agent_name1, algorithm=agent1())
-	# config.register_player(name=agent_name2, algorithm=agent2())
-	
+			# Start playing num_game games
+			for game in range(1, num_game+1):
+				# print("Game number: ", game)
+				game_result = start_poker(config, verbose=0)
 
-	# Start playing num_game games
-	for game in range(1, num_game+1):
-		print("Game number: ", game)
-		game_result = start_poker(config, verbose=0)
-		agent1_pot = agent1_pot + game_result['players'][0]['stack']
-		agent2_pot = agent2_pot + game_result['players'][1]['stack']
+				agent1_pot = agent1_pot + game_result['players'][0]['stack']
+				agent2_pot = agent2_pot + game_result['players'][1]['stack']
+			
 
-	print("\n After playing {} games of {} rounds, the results are: ".format(num_game, max_round))
-	# print("\n Agent 1's final pot: ", agent1_pot)
-	print("\n " + agent_name1 + "'s final pot: ", agent1_pot)
-	print("\n " + agent_name2 + "'s final pot: ", agent2_pot)
+			# For plotting purposes
+			agent_i_stacks.append(agent1_pot)
+			agent_j_stacks.append(agent2_pot)
+			
+		meta_data.append([agent_i_stacks, agent_j_stacks])
 
-	# print("\n ", game_result)
-	# print("\n Random player's final stack: ", game_result['players'][0]['stack'])
-	# print("\n " + agent_name + "'s final stack: ", game_result['players'][1]['stack'])
+	fig, ax = plt.subplots(figsize=(12, 6))
 
-	if (agent1_pot<agent2_pot):
-		print("\n Congratulations! " + agent_name2 + " has won.")
-	elif(agent1_pot>agent2_pot):
-		print("\n Congratulations! " + agent_name1 + " has won.")
-		# print("\n Random Player has won!")
-	else:
-		print("\n It's a draw!") 
+    # Since you mentioned 3 groups of two whisker plots each
+	data_groups = [meta_data[i] for i in range(3)]  # Assuming meta_data is as structured above
+
+	colors = {'POMCP': 'orangered', 'Heuristic': 'skyblue', 'Random': 'lightgreen', 'Raised': 'salmon'}
+	group_labels = ['POMCP vs. Heuristic', 'POMCP vs. Raised', 'POMCP vs. Random']
+	agent_labels = [['POMCP', 'Heuristic'], ['POMCP', 'Raised'], ['POMCP', 'Random']]
+	xtick_locs = [1, 5, 9]  # X locations for the groups
+	offset = 1.5  # Offset for boxes within the same group
+
+	# Plot each group
+	for idx, (group, agents) in enumerate(zip(meta_data, agent_labels)):
+		positions = [xtick_locs[idx], xtick_locs[idx] + offset]
+		box = ax.boxplot(group, positions=positions, widths=0.6, patch_artist=True)
+		for patch, agent in zip(box['boxes'], agents):
+			patch.set_facecolor(colors[agent])
+
+	# Label formatting
+	ax.set_xticks([x + offset / 2 for x in xtick_locs])
+	ax.set_xticklabels(group_labels, fontsize=12)
+	ax.set_ylabel('Post-Game Stack Size', fontsize=15)
+	ax.set_xlabel('Agent Matchups', fontsize=15)
+	ax.set_title('POMCP Matchups Against Bencmark Players', fontsize=18)
+
+	# Grid lines for better readability
+	ax.yaxis.grid(True)  # Horizontal grid lines
+	ax.xaxis.grid(True, linestyle='--')  # Vertical grid lines
+
+	# Set y-axis to scientific notation
+	ax.ticklabel_format(style='scientific', axis='y', scilimits=(0,0))
+	formatter = ScalarFormatter(useMathText=True)  # Use MathText for "x10^" formatting
+	formatter.set_scientific(True)
+	formatter.set_powerlimits((-1,1))
+	ax.yaxis.set_major_formatter(formatter)
+
+
+	# Create legend
+	from matplotlib.patches import Patch
+	legend_elements = [Patch(facecolor=colors[agent], label=agent) for agent in colors]
+	ax.legend(handles=legend_elements, title='Agent Types', loc='upper right', framealpha=1)
+
+
+	plt.savefig('POMCP_benchmark.png')
+	plt.show()
+
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -113,7 +159,7 @@ if __name__ == '__main__':
 
 	name1, agent1, name2, agent2 = parse_arguments()
 	start = time.time()
-	testperf(name1, agent1, name2, agent2)
+	testperf_and_plot()
 	# testperf()
 	end = time.time()
 

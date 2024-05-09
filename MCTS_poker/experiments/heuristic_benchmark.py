@@ -94,10 +94,10 @@ def testperf_and_plot():
 
 	# Label formatting
 	ax.set_xticks([x + offset / 2 for x in xtick_locs])
-	ax.set_xticklabels(group_labels)
-	ax.set_ylabel('Post-Game Stack Size')
-	ax.set_xlabel('Agent Matchups')
-	ax.set_title('Post-Game Stack Size Comparisons Across Different Matchups')
+	ax.set_xticklabels(group_labels, fontsize=12)
+	ax.set_ylabel('Post-Game Stack Size', fontsize=15)
+	ax.set_xlabel('Agent Matchups', fontsize=15)
+	ax.set_title('Post-Game Stack Size Comparisons Across Different Base Players', fontsize=18)
 
 	# Grid lines for better readability
 	ax.yaxis.grid(True)  # Horizontal grid lines
@@ -117,7 +117,7 @@ def testperf_and_plot():
 	ax.legend(handles=legend_elements, title='Agent Types', loc='upper right', framealpha=1)
 
 
-	plt.savefig('heuristic_benchmark.png')
+	plt.savefig('heuristic_benchmark-v2.png')
 	plt.show()
 
 
