@@ -2,16 +2,11 @@ import copy
 import random
 import sys
 sys.path.append("./")
-from hand_eval_player import HeuristicPlayer
 from pypokerengine.api.emulator import Emulator
 from pypokerengine.engine.card import Card
-from pypokerengine.engine.deck import Deck
 from pypokerengine.engine.message_builder import MessageBuilder
-from pypokerengine.utils.card_utils import gen_deck, gen_cards
-from randomplayer import RandomPlayer
-from pypokerengine.engine.round_manager import RoundManager
-from pypokerengine.utils.game_state_utils import\
-        restore_game_state, attach_hole_card, attach_hole_card_from_deck
+from pypokerengine.utils.game_state_utils import attach_hole_card, attach_hole_card_from_deck
+from hand_eval_player import HeuristicPlayer
 
 #TODO: Think about ways to make this smarter like configuring the random distributions away from random uniform across all potential values (e.g., skewed gaussian)
 
@@ -64,10 +59,10 @@ class State:
 
             # 2. Setup GameState object
             p1_uuid = "uuid-1"
-            p1_model = HeuristicPlayer(p1_uuid)
+            p1_model = HeuristicPlayer()
             emulator.register_player(p1_uuid, p1_model)
             p2_uuid = "uuid-2"
-            p2_model = HeuristicPlayer(p2_uuid)
+            p2_model = HeuristicPlayer()
             emulator.register_player(p2_uuid, p2_model)
             players_info = {
                 "uuid-1": { "name": "POMCP", "stack": 1000 },
@@ -104,10 +99,10 @@ class State:
 
             # 2. Setup GameState object
             p1_uuid = "uuid-1"
-            p1_model = HeuristicPlayer(p1_uuid)
+            p1_model = HeuristicPlayer()
             emulator.register_player(p1_uuid, p1_model)
             p2_uuid = "uuid-2"
-            p2_model = HeuristicPlayer(p2_uuid)
+            p2_model = HeuristicPlayer()
             emulator.register_player(p2_uuid, p2_model)
             players_info = {
                 "uuid-1": { "name": "POMCP", "stack": 1000 },

@@ -264,7 +264,7 @@ class MCTS():
                 if is_round_finish(next_game_state):
                     cur_stack = 1000
                     # How much the main player gained or lost
-                    reward = next_game_state.game_state["table"].seats.players[0].stack - cur_stack
+                    reward = next_game_state["table"].seats.players[0].stack - cur_stack
                 else:
                     tree = child_tree
                     tree.state = State.from_game_state(next_game_state)

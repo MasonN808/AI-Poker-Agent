@@ -1,16 +1,5 @@
-import json
-
-import numpy as np
-from MCTS_poker.utils import State
 from pypokerengine.engine.hand_evaluator import HandEvaluator
 from pypokerengine.players import BasePokerPlayer
-from time import sleep
-import pprint
-import pickle
-
-from MCTS_poker.populate import SearchTree
-import random as rand
-import tensorflow as tf
 from pypokerengine.engine.card import Card
 
 class HeuristicPlayer(BasePokerPlayer):

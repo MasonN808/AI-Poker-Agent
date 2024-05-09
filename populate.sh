@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # SLURM settings for the job submission
-#SBATCH --job-name=800k-64           # Name of the job
+#SBATCH --job-name=1M-91           # Name of the job
 #SBATCH --cpus-per-task=5         # Number of CPUs per task
-#SBATCH --mem=100G                # Memory allocated
+#SBATCH --mem=40G                # Memory allocated
 #SBATCH --nodes=1                 # Number of nodes
 #SBATCH --ntasks=1                # Number of tasks
 #SBATCH --time=3-00:00:00           # Maximum run time of the job (set to 3 days)
