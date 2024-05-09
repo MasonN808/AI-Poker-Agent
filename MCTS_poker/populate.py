@@ -63,8 +63,8 @@ class MCTS():
     MCTS for Poker in pypoker engine
     """
     def __init__(self,
-                 explore=100,
-                 n_particles=64):
+                 explore=150,
+                 n_particles=91): # Max is 91 in theory
 
         self.explore = explore
         self.n_particles = n_particles
@@ -74,10 +74,10 @@ class MCTS():
         self.num_rollouts = 1
         # self.timeout = 5000
         # self.timeout = 50000
-        self.timeout = 200_000
+        # self.timeout = 500_000
         # self.timeout = 600_000
         # self.timeout = 4_500_000
-        # self.timeout = 1_000_000
+        self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 10
@@ -105,15 +105,11 @@ class MCTS():
                 # Loop through all current belief states
                 sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(state.game_state["table"].seats.players[1].hole_card)
                 for nodes_tree in nodes[sorted_card_str]:
-                    # print(len(nodes[sorted_card_str]))
                     # Sort the opponnets hole cards and remove the suits
-                    # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])
-                    # print([card for card in sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)])
                     sorted_prunned_opp_hole_cards_nodes = sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)
                     # If the opponnet has the same hole cards as a tree in the nodes tree then break and dont add the tree to the trees list
-                    # TODO: this may be eroneus due to the fact that community cards may never be allocated during the behinning rounds but it may be trivial for our case
+                    # Check if the state is already in the belief states
                     if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
-                        # print("IS UNIQUE")
                         is_unique = False
                         break
 
@@ -225,6 +221,7 @@ class MCTS():
         # Keep going down tree until a node with no children is found
         while tree.children:
             # Replace current node with the child that maximized UCB1(s) value
+            # Do not traverse the fold node since the result if deterministic given the game tree
             child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child) if child.action != "fold" else -100000)
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
@@ -237,29 +234,13 @@ class MCTS():
         # Now tree is assumed to be a leaf node
         # Check if the node has been traversed
         if tree.visit == 0:
-            # Sometimes this happens
-            # if tree.state.game_state["table"].seats.players[0].hole_card == []:
-            #     reward = 0
-            # else:
             reward = self.rollout(tree.state, self.emulator)
 
         else:
             if is_round_finish(tree.state.game_state):
-                # print(tree.parent.state.game_state)
-                # print(tree.state.game_state)
-                # print(tree.state.game_state["table"].seats.players[0].stack)
-                # print(tree.state.game_state["table"].seats.players[1].stack)
                 cur_stack = 1000
-                # print(f"==>> cur_stack: {cur_stack}")
-                # reward = self.rollout(tree.state, self.emulator)
-                # print(tree.state.game_state["table"].seats.players[0].name)
-                # end_game_state, events = self.emulator.apply_action(tree.parent.state.game_state, tree.state.action)
-        
                 # How much the main player gained or lost
                 reward = tree.state.game_state["table"].seats.players[0].stack - cur_stack
-                # print(tree.state.game_state["table"].seats.players[1].hole_card)
-                # print(reward)
-                # exit()
             else:
                 # If node has been visited, expand the tree and perform rollout
                 # NOTE: all children do not have state or valid actions after expansion
@@ -268,19 +249,13 @@ class MCTS():
                 # Rollout on first child, other children will eventually get rolled out via UCB1
                 action, child_tree = next(iter(tree.children.items()))
 
-                # Need to reset the players stack to prevent game from ending
-                # TODO: Idk if this is right
-                # tree.state.game_state["table"].seats.players[0].stack = 1000
-                # tree.state.game_state["table"].seats.players[1].stack = 1000
                 # Extract resulting state for child node after performing action from parent node
                 next_game_state , messages = from_state_action_to_state(self.emulator, tree.state.game_state, action)
                 # Check if next_game_state is end of round
                 if is_round_finish(next_game_state):
                     cur_stack = 1000
-
                     # How much the main player gained or lost
                     reward = tree.state.game_state["table"].seats.players[0].stack - cur_stack
-                    # return
                 else:
                     tree = child_tree
                     tree.state = State.from_game_state(next_game_state)
@@ -312,9 +287,9 @@ class MCTS():
             # Alternate the reward for 0-sum 2-player poker
             # NOTE:  (reward - tree.value)/tree.visit from POMCP Paper
             if tree.player == "opp":
-                tree.value += (reward - tree.value)/tree.visit
+                tree.value = tree.value + (reward - tree.value)/tree.visit
             else:
-                tree.value -= (reward - tree.value)/tree.visit
+                tree.value = tree.value - (reward - tree.value)/tree.visit
             
             tree = tree.parent
         
