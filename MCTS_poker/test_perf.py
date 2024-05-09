@@ -42,16 +42,36 @@ def testperf(agent_name1, agent1, agent_name2, agent2):
 # 	==>> self.in_table: 14158
 # ==>> self.not_in_table: 36163
 	# Register players
+	# These just dont work after the absraction on suits
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_1000000_reinvigoration-1000__reinvigoration-5.json'))
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-1000__reinvigoration-5.json'))
-	config.register_player(name="MCTS", algorithm=MCTSPlayer())
+ 
+	# This runs well
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+	# This runs terribly
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-120.json'))
+
+	# This runs about same as heuristic
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100-belief_state_update.json'))
+
+	# This performs terribly
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_1000000_reinvigoration-20_explore-100-belief_state_update-bad.json'))
+
+	# Performs to expectation
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100-belief_state_update.json'))
+
+	# Performs poorly
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_200000_reinvigoration-1000_explore-100-n_particles-32.json'))
+
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_10000_reinvigoration-1000_explore-100-n_particles-128.json'))
+	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_10000_reinvigoration-10_explore-100-n_particles-8.json'))
+	config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='test.json'))
 	config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer())
 	# config.register_player(name="Raised", algorithm=RaisedPlayer())
+	# config.register_player(name="Raised", algorithm=RaisedPlayer())
 	# config.register_player(name="Random", algorithm=RandomPlayer())
 	# config.register_player(name="Random", algorithm=RandomPlayer())
-	# config.register_player(name=agent_name1, algorithm=agent1())
-	# config.register_player(name=agent_name2, algorithm=agent2())
 	
 	agent_1_wins = 0
 	agent_2_wins = 0

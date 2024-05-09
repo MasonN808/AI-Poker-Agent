@@ -156,14 +156,16 @@ def add_state_tree_to_external(nodes: dict, tree) -> dict:
                 # print("IS UNIQUE")
                 is_unique = False
                 break
+
         if is_unique:
             # Let 256 be our belief state buffer size
-            if len(nodes[sorted_card_str]) < 256:
-                nodes[sorted_card_str].append(tree)
-            else:
-                # replace a random tree with new tree
-                random_index = random.randint(0, 255)
-                nodes[sorted_card_str][random_index] = tree 
+            # if len(nodes[sorted_card_str]) < 256:
+            #     nodes[sorted_card_str].append(tree)
+            # else:
+            #     # replace a random tree with new tree
+            #     random_index = random.randint(0, 255)
+            #     nodes[sorted_card_str][random_index] = tree 
+            nodes[sorted_card_str].append(tree)
     else:
         nodes[sorted_card_str] = [tree]
 
