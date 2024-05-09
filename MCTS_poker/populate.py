@@ -10,7 +10,7 @@ from pypokerengine.engine.seats import Seats
 from pypokerengine.players import BasePokerPlayer
 from pypokerengine.utils.card_utils import gen_cards, estimate_hole_card_win_rate
 # from pypokerengine.api.emulator import apply_action
-from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions
+from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions, sort_cards, sort_cards_card_obj
 from pypokerengine.engine.round_manager import RoundManager
 # from pypokerengine.engine.hand_evaluator import eval_hand
 from pypokerengine.utils.game_state_utils import restore_game_state
@@ -20,7 +20,6 @@ from pypokerengine.api.emulator import Emulator
 from randomplayer import RandomPlayer
 import random as rand
 from tqdm import tqdm
-
 
 nodes = {}
 state_actions = {}
@@ -37,6 +36,8 @@ class SearchTree:
         self.state: State = state          # Observation
         self.valid_actions: list[str] = None
 
+        self.my_pot_portion = 0
+
     def expand(self, valid_actions: list[str]):
         assert valid_actions != None, "valid actions should not be none"
         for action in valid_actions:
@@ -45,6 +46,10 @@ class SearchTree:
             else:
                 player = "main"
 
+            # reward = 
+            # if action == "fold":
+                # self.children[action] = SearchTree(player=player, action=action, parent=self)
+            # else:
             self.children[action] = SearchTree(player=player, action=action, parent=self)
 
     def ucb(self, child):
@@ -59,7 +64,7 @@ class MCTS():
     """
     def __init__(self,
                  explore=100,
-                 n_particles=128):
+                 n_particles=64):
 
         self.explore = explore
         self.n_particles = n_particles
@@ -68,29 +73,26 @@ class MCTS():
 
         self.num_rollouts = 1
         # self.timeout = 5000
+        # self.timeout = 50000
         self.timeout = 200_000
         # self.timeout = 600_000
         # self.timeout = 4_500_000
         # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
-        self.reinvigoration = 20
+        self.reinvigoration = 10
 
     # Search module
     def search(self, state=None):
         global nodes
 
-        # NOTE: Some state_info is "|" with no community cards or hole cards because the player folded in prior action
-        # Repeat Simulations until timeout
         for t in tqdm(range(self.timeout), desc='Progress'):
-            # print(t)
-            # TODO: mason-decide if this is right or smaple from new state after each simulate()
             if state == None:
-                # print("new state")
                 # Sample an initial state (observation) and get the initialized pypoker emulator
                 state_instance = State()
                 state, self.emulator = state_instance.random_state()  # s ~ I(s_0=s)
             # print(f"==>> state: {state.state_info}")
+            assert not is_round_finish(state.game_state)
             if state.game_state['next_player'] == 1:
                 player = "main"
             else:
@@ -98,57 +100,59 @@ class MCTS():
 
             # Check if state info is a key in nodes to avoid creating unnecessary new tree objects
             if state.state_info in nodes and player == "main":
-                # TODO: tree and state opponnet hole cards are different here!!!!!! ISSUE probably in how were adding nodes to external nodes dictionary
-                # print(t)
-                # print(f"==>> tree.state.state_info: {tree.state.state_info}")
-                # print(f"==>> state.state_info: {state.state_info}")
-                # print([card.__str__() for card in tree.state.game_state["table"].seats.players[1].hole_card])
-                # print([card.__str__() for card in tree.state.game_state["table"].seats.players[0].hole_card])
-                # print([card.__str__() for card in state.game_state["table"].seats.players[1].hole_card])
-                # print([card.__str__() for card in state.game_state["table"].seats.players[0].hole_card])
-                # assert tree.state.state_info == state.state_info
+                sorted_card_str = sort_cards(state.state_info)
+                is_unique = True
+                # Loop through all current belief states
+                sorted_prunned_opp_hole_cards_tree = sort_cards_card_obj(state.game_state["table"].seats.players[1].hole_card)
+                for nodes_tree in nodes[sorted_card_str]:
+                    # print(len(nodes[sorted_card_str]))
+                    # Sort the opponnets hole cards and remove the suits
+                    # print([card.__str__() for card in nodes_tree.state.game_state["table"].seats.players[1].hole_card])
+                    # print([card for card in sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)])
+                    sorted_prunned_opp_hole_cards_nodes = sort_cards_card_obj(nodes_tree.state.game_state["table"].seats.players[1].hole_card)
+                    # If the opponnet has the same hole cards as a tree in the nodes tree then break and dont add the tree to the trees list
+                    # TODO: this may be eroneus due to the fact that community cards may never be allocated during the behinning rounds but it may be trivial for our case
+                    if (sorted_prunned_opp_hole_cards_tree == sorted_prunned_opp_hole_cards_nodes):
+                        # print("IS UNIQUE")
+                        is_unique = False
+                        break
 
-                # Check if any trees in value-tree list has the same opponent hole card
-                # opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
-                # print(opp_hole_cards_and_trees[0][1].state.community_cards == state.community_cards)
-                # print(opp_hole_cards_and_trees[0][0] != state.game_state["table"].seats.players[1].hole_card)
-                # print([card.__str__() for card in state.game_state["table"].seats.players[1].hole_card])
-                # print([card.__str__() for card in opp_hole_cards_and_trees[0][0]])
-                # Now get trees that have the same community card but different opponnent hole card
-                # print(f"==>> len(opp_hole_cards_and_trees): {len(opp_hole_cards_and_trees)}")
+                if is_unique:
+                    tree = SearchTree(player=player, state=state, action=None, parent=None)
+                    self.simulate(tree)
 
-                # opp_hole_cards_and_trees = [(tree.state.game_state["table"].seats.players[1].hole_card, tree) for tree in nodes[state.state_info]]
-                # belief_trees = [tup[1] for tup in opp_hole_cards_and_trees if 
-                #          (tup[1].state.community_cards == state.community_cards) and  # Check community cards are the same
-                #          (tup[0] == state.game_state["table"].seats.players[1].hole_card)] # Check hole card of opponenet are different
+                # if state.game_state
 
-                # belief_trees = copy.copy(nodes[state.state_info])
-                # belief_trees = copy.copy(nodes[state.state_info])
+
                 belief_trees = nodes[state.state_info]
 
-                # belief_trees = nodes[state.state_info]
-                # print(len(belief_trees))
-                # print(f"==>> belief_trees: {len(belief_trees)}")
-                # assert len(belief_trees) == opp_hole_cards_and_trees
-                # TODO: Figure out this assertion
-                # assert len(trees) <= 1, "Tree should only be one, otherwise, we have duplicate states in dictionary NOT GOOD!"
-                # These trees are our belief states
-                # print(f"==>> len(trees): {len(belief_trees)}")
+                traversed_belief_trees = []
                 if len(belief_trees) > 0:
                     # print(len(belief_trees))
-                    current_value = 0
+                    i = 0
                     # Upperboud the while loop to prevent hangs
-                    while belief_trees and current_value < self.n_particles:
-                        current_value += 1
+                    while belief_trees and i < self.n_particles:
+                        i += 1
                         # Select and remove a random element from belief_trees
+
                         random_index = random.randint(0, len(belief_trees) - 1)
                         random_tree = belief_trees[random_index]
-                        # print(state is random_tree.state)
-                        # print(state.state_info)
-                        # print(random_tree.state.state_info)
+
                         self.simulate(random_tree)
+
+                        traversed_belief_trees.append(random_tree)
+                        belief_trees.remove(random_tree)
+
+                    # Reappend the traversed trees
+                    belief_trees = belief_trees + traversed_belief_trees
+                    
+                    nodes[state.state_info] = belief_trees
+
+                    # Reset to save memory
+                    traversed_belief_trees = []
+
                     # Sample from the start state every n simulations
-                    if t % self.reinvigoration == 0:
+                    if (t + 1) % self.reinvigoration == 0:
                         state = None 
                     # Skip outside simulate
                     continue
@@ -162,7 +166,7 @@ class MCTS():
             self.simulate(tree)
 
             # Sample from the start state every n simulations
-            if t % self.reinvigoration == 0:
+            if (t + 1) % self.reinvigoration == 0:
                 state = None 
 
         # Make a new hacshmap with state strings as keys and values as optimal actions
@@ -181,7 +185,7 @@ class MCTS():
                 assert tree.state.state_info == key
 
                 # If node has no children, take a random action
-                if tree.children == {}:
+                if tree.children == {} or tree.visit < 2:
                     pass
                 else:
                     action = max(tree.children.values(), key=lambda child: child.value).action
@@ -213,7 +217,6 @@ class MCTS():
         Simulation performed using the UCT Algorithm
         """
         global nodes
-        # print(tree.state.game_state)
 
         assert tree.state != None, "State is None"
         if tree.valid_actions == None:
@@ -222,11 +225,7 @@ class MCTS():
         # Keep going down tree until a node with no children is found
         while tree.children:
             # Replace current node with the child that maximized UCB1(s) value
-            # for child in tree.children.values():
-            #     print(f"==>> child.value: {child.value}")
-            #     print(f"==>> tree.ucb(child): {tree.ucb(child)}")
-            #     print(f"==>> self.explore * tree.ucb(child): {self.explore * tree.ucb(child)}")
-            child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
+            child = max(tree.children.values(), key=lambda child: child.value + self.explore * tree.ucb(child) if child.action != "fold" else -100000)
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
                 next_game_state , _ = from_state_action_to_state(self.emulator, tree.state.game_state, child.action)
@@ -239,43 +238,66 @@ class MCTS():
         # Check if the node has been traversed
         if tree.visit == 0:
             # Sometimes this happens
-            if tree.state.game_state["table"].seats.players[0].hole_card == []:
-                reward = 0
-            else:
-                reward = self.rollout(tree.state, self.emulator)
+            # if tree.state.game_state["table"].seats.players[0].hole_card == []:
+            #     reward = 0
+            # else:
+            reward = self.rollout(tree.state, self.emulator)
 
         else:
-            # If node has been visited, expand the tree and perform rollout
-            # NOTE: all children do not have state or valid actions after expansion
-            tree.expand(tree.valid_actions)
-
-            # Rollout on first child, other children will eventually get rolled out via UCB1
-            action, child_tree = next(iter(tree.children.items()))
-
-            # Need to reset the players stack to prevent game from ending
-            # TODO: Idk if this is right
-            tree.state.game_state["table"].seats.players[0].stack = 1000
-            tree.state.game_state["table"].seats.players[1].stack = 1000
-            # Extract resulting state for child node after performing action from parent node
-            next_game_state , messages = from_state_action_to_state(self.emulator, tree.state.game_state, action)
-            # Check if next_game_state is end of round
-            if is_round_finish(next_game_state):
-                return
-
-            tree = child_tree
-            tree.state = State.from_game_state(next_game_state)
-            tree.valid_actions = get_valid_actions(next_game_state)
-
-            if tree.state.game_state["table"].seats.players[0].hole_card == []:
-                reward = 0
+            if is_round_finish(tree.state.game_state):
+                # print(tree.parent.state.game_state)
+                # print(tree.state.game_state)
+                # print(tree.state.game_state["table"].seats.players[0].stack)
+                # print(tree.state.game_state["table"].seats.players[1].stack)
+                cur_stack = 1000
+                # print(f"==>> cur_stack: {cur_stack}")
+                # reward = self.rollout(tree.state, self.emulator)
+                # print(tree.state.game_state["table"].seats.players[0].name)
+                # end_game_state, events = self.emulator.apply_action(tree.parent.state.game_state, tree.state.action)
+        
+                # How much the main player gained or lost
+                reward = tree.state.game_state["table"].seats.players[0].stack - cur_stack
+                # print(tree.state.game_state["table"].seats.players[1].hole_card)
+                # print(reward)
+                # exit()
             else:
-                reward = self.rollout(tree.state, self.emulator)
+                # If node has been visited, expand the tree and perform rollout
+                # NOTE: all children do not have state or valid actions after expansion
+                tree.expand(tree.valid_actions)
+
+                # Rollout on first child, other children will eventually get rolled out via UCB1
+                action, child_tree = next(iter(tree.children.items()))
+
+                # Need to reset the players stack to prevent game from ending
+                # TODO: Idk if this is right
+                # tree.state.game_state["table"].seats.players[0].stack = 1000
+                # tree.state.game_state["table"].seats.players[1].stack = 1000
+                # Extract resulting state for child node after performing action from parent node
+                next_game_state , messages = from_state_action_to_state(self.emulator, tree.state.game_state, action)
+                # Check if next_game_state is end of round
+                if is_round_finish(next_game_state):
+                    cur_stack = 1000
+
+                    # How much the main player gained or lost
+                    reward = tree.state.game_state["table"].seats.players[0].stack - cur_stack
+                    # return
+                else:
+                    tree = child_tree
+                    tree.state = State.from_game_state(next_game_state)
+                    tree.valid_actions = get_valid_actions(next_game_state)
+
+                    reward = self.rollout(tree.state, self.emulator)
 
         # Do backpropogation up the tree
         self.backup(tree, reward)
+
+        if is_round_finish(tree.state.game_state):
+            return
+
         # print(tree.state.game_state)
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
+
         return
     
     @staticmethod
@@ -314,14 +336,14 @@ class MCTS():
         return reward
 
 def is_round_finish(game_state):
-    return game_state["street"] != Const.Street.FINISHED
+    return game_state["street"] == Const.Street.FINISHED
 
 if __name__ == '__main__':
     from pypokerengine.api.emulator import Emulator
     import json
 
     mcts = MCTS()
-    nodes = mcts.search()
+    state_actions = mcts.search()
     time_out = mcts.timeout
     reinvigoration = mcts.reinvigoration
     n_particles = mcts.n_particles
@@ -329,4 +351,4 @@ if __name__ == '__main__':
        
     with open(f'tree_{time_out}_reinvigoration-{reinvigoration}_explore-{explore}-n_particles-{n_particles}.json', 'w') as f:
     # with open(f'test.json', 'w') as f:
-        json.dump(nodes, f, indent=4)
+        json.dump(state_actions, f, indent=4)
