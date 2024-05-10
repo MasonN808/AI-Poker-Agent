@@ -2,7 +2,7 @@ import math
 import sys
 
 sys.path.insert(0, './')
-from MCTS_poker.utils import State
+from POMCP_poker.utils import State
 sys.path.insert(0, './pypokerengine/api/')
 import game
 setup_config = game.setup_config
@@ -15,7 +15,7 @@ from argparse import ArgumentParser
 from randomplayer import RandomPlayer
 from raise_player import RaisedPlayer
 from hand_eval_player import HeuristicPlayer
-from MCTS_poker.mcts_player import MCTSPlayer
+from Group14Player import Group14Player
 """ ========================================================= """
 
 """ Example---To run testperf.py with random warrior AI against itself. 
@@ -66,11 +66,11 @@ def testperf(agent_name1, agent1, agent_name2, agent2):
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_10000_reinvigoration-1000_explore-100-n_particles-128.json'))
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_10000_reinvigoration-10_explore-100-n_particles-8.json'))
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='tree_1000000_reinvigoration-10_explore-150-n_particles-91.json'))
-	config.register_player(name="MCTS", algorithm=MCTSPlayer(search_tree='new-tree_1000000_reinvigoration-20000_explore-200-n_particles-91.json'))
+	config.register_player(name="MCTS", algorithm=Group14Player(search_tree='search_trees/new-tree_1000000_reinvigoration-20000_explore-200-n_particles-91.json'))
 	# config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
 	# config.register_player(name="MCTS", algorithm=MCTSPlayer())
-	config.register_player(name="Raised", algorithm=RaisedPlayer())
 	# config.register_player(name="Raised", algorithm=RaisedPlayer())
+	config.register_player(name="Raised", algorithm=Group14Player(search_tree="BEST-search_tree_200000_reinvigoration-10_explore-100.json"))
 	# config.register_player(name="Random", algorithm=RandomPlayer())
 	# config.register_player(name="Random", algorithm=RandomPlayer())
 	

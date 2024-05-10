@@ -5,7 +5,7 @@ import math
 import sys
 
 sys.path.insert(0, './')
-from MCTS_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions, sort_cards, sort_cards_card_obj
+from POMCP_poker.utils import State, add_state_tree_to_external, from_state_action_to_state, get_valid_actions, sort_cards, sort_cards_card_obj
 from pypokerengine.engine.poker_constants import PokerConstants as Const
 from pypokerengine.engine.hand_evaluator import HandEvaluator
 from pypokerengine.api.emulator import Emulator
@@ -62,23 +62,14 @@ class MCTS():
     POMCP for Poker using pypoker engine
     """
     def __init__(self,
-                 explore=200,
+                 explore=160,
                  n_particles=91): # Max is 91 in theory
 
         self.explore = explore
         self.n_particles = n_particles
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
-
-        # self.timeout = 200_000
-        # self.timeout = 50000
-        # self.timeout = 500_000
-        # self.timeout = 200_000
-        # self.timeout = 600_000
-        # self.timeout = 4_500_000
-        self.timeout = 2_000_000
-        # self.timeout = 10_000_000
-        # self.timeout = 50_000_000
+        self.timeout = 200_000
         self.reinvigoration = 20000
 
     # Search module
@@ -95,7 +86,7 @@ class MCTS():
                 # i.e., get a state where the opponent cards change, but yours stays the same
                 state_instance = State()
                 state, self.emulator = state_instance.random_state(state)  # s ~ B(s_0=s)
-            # print(f"==>> state: {state.state_info}")
+
             assert not is_round_finish(state.game_state)
             if state.game_state['next_player'] == 1:
                 player = "main"
@@ -230,7 +221,6 @@ class MCTS():
                 if valid_children:
                     child = min(valid_children.values(), key=lambda child: child.value + self.explore * tree.ucb(child))
 
-            # print(child.value)
             # Since some children may not have been initialized with state or valid actions
             if child.state == None:
                 next_game_state , _ = from_state_action_to_state(self.emulator, tree.state.game_state, child.action)
@@ -278,7 +268,6 @@ class MCTS():
         if is_round_finish(tree.state.game_state):
             return
 
-        # print(tree.state.game_state)
         if tree.player == "main":
             nodes = add_state_tree_to_external(nodes, tree)
 
@@ -292,23 +281,7 @@ class MCTS():
         """
         while tree is not None:
             tree.visit += 1
-            # Assign negative reward to Opponent
-            # Alternate the reward for 0-sum 2-player poker
-            # NOTE:  (reward - tree.value)/tree.visit from POMCP Paper
-            # if tree.player == "opp":
-            #     tree.value = tree.value + reward
-            # else:
-            #     tree.value = tree.value - reward
-            # if tree.player == "opp":
-            #     tree.value = tree.value + (reward - tree.value)/tree.visit
-            # else:
-            #     tree.value = tree.value - (reward - tree.value)/tree.visit
-
-            # if tree.player == "opp":
             tree.value = tree.value + (reward - tree.value)/tree.visit
-            # else:
-            #     tree.value = tree.value - (reward - tree.value)/tree.visit
-            
             tree = tree.parent
         
     def rollout(self, state: State, emulator: Emulator):

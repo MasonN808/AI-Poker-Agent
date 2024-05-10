@@ -2,7 +2,7 @@ import math
 import sys
 
 sys.path.insert(0, './')
-from MCTS_poker.utils import State
+from POMCP_poker.utils import State
 sys.path.insert(0, './pypokerengine/api/')
 import game
 setup_config = game.setup_config
@@ -18,7 +18,7 @@ from matplotlib.patches import Patch
 from randomplayer import RandomPlayer
 from raise_player import RaisedPlayer
 from hand_eval_player import HeuristicPlayer
-from MCTS_poker.mcts_player import MCTSPlayer
+from Group14Player import Group14Player
 """ ========================================================= """
 
 """ Example---To run testperf.py with random warrior AI against itself. 
@@ -90,7 +90,7 @@ def testperf_and_plot():
 def parse_arguments():
 	parser = ArgumentParser()
 	parser.add_argument('-n1', '--agent_name1', help="Name of agent 1", default="MCTS", type=str)
-	parser.add_argument('-a1', '--agent1', help="Agent 1", default=MCTSPlayer())    
+	parser.add_argument('-a1', '--agent1', help="Agent 1", default=Group14Player())    
 	# parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RAISED", type=str)
 	# parser.add_argument('-a2', '--agent2', help="Agent 2", default=RaisedPlayer())    
 	parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RANDOM", type=str)

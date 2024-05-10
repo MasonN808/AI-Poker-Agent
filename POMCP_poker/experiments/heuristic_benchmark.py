@@ -2,7 +2,7 @@ import math
 import sys
 
 sys.path.insert(0, './')
-from MCTS_poker.utils import State
+from POMCP_poker.utils import State
 sys.path.insert(0, './pypokerengine/api/')
 import game
 setup_config = game.setup_config
@@ -17,7 +17,7 @@ from matplotlib.ticker import ScalarFormatter
 from randomplayer import RandomPlayer
 from raise_player import RaisedPlayer
 from hand_eval_player import HeuristicPlayer
-from MCTS_poker.mcts_player import MCTSPlayer
+from Group14Player import Group14Player
 """ ========================================================= """
 
 """ Example---To run testperf.py with random warrior AI against itself. 
@@ -26,6 +26,9 @@ $ python testperf.py -n1 "Random Warrior 1" -a1 RandomPlayer -n2 "Random Warrior
 """
 
 def testperf_and_plot():		
+	meta_agent_1_stacks = [] # Heuristic
+	meta_agent_2_stacks = [] # Random
+	meta_agent_3_stacks = [] # Raised
 	meta_data = []
 	for i in range(3):
 		agent_i_stacks = []
@@ -46,19 +49,19 @@ def testperf_and_plot():
 			
 			# Register players
 			if i == 0:
-				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
 				config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
+				config.register_player(name="Random", algorithm=RandomPlayer())
 			if i == 1:
-				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
 				config.register_player(name="Raised", algorithm=RaisedPlayer())
 			if i == 2:
-				config.register_player(name="POMCP", algorithm=MCTSPlayer(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="Raised", algorithm=RaisedPlayer())
 				config.register_player(name="Random", algorithm=RandomPlayer())
 			
 
 			# Start playing num_game games
 			for game in range(1, num_game+1):
-				# print("Game number: ", game)
+				print("Game number: ", game)
 				game_result = start_poker(config, verbose=0)
 
 				agent1_pot = agent1_pot + game_result['players'][0]['stack']
@@ -76,9 +79,9 @@ def testperf_and_plot():
     # Since you mentioned 3 groups of two whisker plots each
 	data_groups = [meta_data[i] for i in range(3)]  # Assuming meta_data is as structured above
 
-	colors = {'POMCP': 'orangered', 'Heuristic': 'skyblue', 'Random': 'lightgreen', 'Raised': 'salmon'}
-	group_labels = ['POMCP vs. Heuristic', 'POMCP vs. Raised', 'POMCP vs. Random']
-	agent_labels = [['POMCP', 'Heuristic'], ['POMCP', 'Raised'], ['POMCP', 'Random']]
+	colors = {'Heuristic': 'skyblue', 'Random': 'lightgreen', 'Raised': 'salmon'}
+	group_labels = ['Heuristic vs. Random', 'Heuristic vs. Raised', 'Raised vs. Random']
+	agent_labels = [['Heuristic', 'Random'], ['Heuristic', 'Raised'], ['Raised', 'Random']]
 	xtick_locs = [1, 5, 9]  # X locations for the groups
 	offset = 1.5  # Offset for boxes within the same group
 
@@ -94,7 +97,7 @@ def testperf_and_plot():
 	ax.set_xticklabels(group_labels, fontsize=12)
 	ax.set_ylabel('Post-Game Stack Size', fontsize=15)
 	ax.set_xlabel('Agent Matchups', fontsize=15)
-	ax.set_title('POMCP Matchups Against Bencmark Players', fontsize=18)
+	ax.set_title('Post-Game Stack Size Comparisons Across Different Base Players', fontsize=18)
 
 	# Grid lines for better readability
 	ax.yaxis.grid(True)  # Horizontal grid lines
@@ -114,14 +117,14 @@ def testperf_and_plot():
 	ax.legend(handles=legend_elements, title='Agent Types', loc='upper right', framealpha=1)
 
 
-	plt.savefig('POMCP_benchmark.png')
+	plt.savefig('heuristic_benchmark-v2.png')
 	plt.show()
 
 
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument('-n1', '--agent_name1', help="Name of agent 1", default="MCTS", type=str)
-    parser.add_argument('-a1', '--agent1', help="Agent 1", default=MCTSPlayer())    
+    parser.add_argument('-a1', '--agent1', help="Agent 1", default=Group14Player())    
     # parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RAISED", type=str)
     # parser.add_argument('-a2', '--agent2', help="Agent 2", default=RaisedPlayer())    
     parser.add_argument('-n2', '--agent_name2', help="Name of agent 2", default="RANDOM", type=str)
