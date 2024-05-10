@@ -299,10 +299,15 @@ class MCTS():
             #     tree.value = tree.value + reward
             # else:
             #     tree.value = tree.value - reward
-            if tree.player == "opp":
-                tree.value = tree.value + (reward - tree.value)/tree.visit
-            else:
-                tree.value = tree.value - (reward - tree.value)/tree.visit
+            # if tree.player == "opp":
+            #     tree.value = tree.value + (reward - tree.value)/tree.visit
+            # else:
+            #     tree.value = tree.value - (reward - tree.value)/tree.visit
+
+            # if tree.player == "opp":
+            tree.value = tree.value + (reward - tree.value)/tree.visit
+            # else:
+            #     tree.value = tree.value - (reward - tree.value)/tree.visit
             
             tree = tree.parent
         
