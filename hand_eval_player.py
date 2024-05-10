@@ -4,16 +4,8 @@ from pypokerengine.engine.card import Card
 
 class HeuristicPlayer(BasePokerPlayer):
     def __init__(self, epsilon=52000):
-        # epsilon = 52000 
-        # 1100 1011 0010 0000
-        # raise if hole card better than high card Q
         super().__init__()
         self.hand_evaluator = HandEvaluator()
-        self.raises = 0
-        self.folds = 0
-        self.calls = 0
-        self.highest_value = 0
-        self.lowest_value = 0
         self.epsilon = epsilon
 
 
@@ -24,31 +16,19 @@ class HeuristicPlayer(BasePokerPlayer):
         heuristic = self.hand_evaluator.eval_hand(hole_cards, community_cards)
         reward = heuristic
 
-        # print(f"==>> self.raises: {self.raises}")
-        # print(f"==>> self.folds: {self.folds}")
-        # hand_info = HandEvaluator.gen_hand_rank_info(hole_cards, community_cards)
-        # hand_strength = hand_info['hand']['strength']
-        if reward > self.highest_value:
-            self.highest_value = reward
-        if reward < self.lowest_value:
-            self.lowest_value = reward
-        # print(f"==>> self.lowest_value: {self.lowest_value}")
-        # print(f"==>> self.highest_value: {self.highest_value}")
         if reward > self.epsilon:
             for i in valid_actions:
                 if i["action"] == "raise":
                     action = i["action"]
-                    self.raises += 1
-                    return action  # action returned here is sent to the poker engine
+                    return action
             action = valid_actions[1]["action"]
-            return action # action r
+            return action
         # Just fold
         else:
             for i in valid_actions:
                 if i["action"] == "fold":
                     action = i["action"]
-                    self.folds += 1
-                    return action  # action returned here is sent to the poker engine
+                    return action
         
     def receive_game_start_message(self, game_info):
         pass

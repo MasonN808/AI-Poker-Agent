@@ -79,7 +79,6 @@ class State:
             return self, emulator
         
         else:
-
             num_player = 2
             max_round = 10000000000
             small_blind_amount = 10
