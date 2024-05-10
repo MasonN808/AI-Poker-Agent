@@ -46,13 +46,13 @@ def testperf_and_plot():
 			
 			# Register players
 			if i == 0:
-				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_trees/new-tree_1000000_reinvigoration-20000_explore-200-n_particles-91.json'))
 				config.register_player(name="Heuristic", algorithm=HeuristicPlayer())
 			if i == 1:
-				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_trees/new-tree_1000000_reinvigoration-20000_explore-200-n_particles-91.json'))
 				config.register_player(name="Raised", algorithm=RaisedPlayer())
 			if i == 2:
-				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_tree_200000_reinvigoration-10_explore-100.json'))
+				config.register_player(name="POMCP", algorithm=Group14Player(search_tree='search_trees/new-tree_1000000_reinvigoration-20000_explore-200-n_particles-91.json'))
 				config.register_player(name="Random", algorithm=RandomPlayer())
 			
 
