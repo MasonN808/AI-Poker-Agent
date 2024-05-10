@@ -70,13 +70,13 @@ class MCTS():
         self.emulator = None
         self.hand_evaluator = HandEvaluator()
 
-        # self.timeout = 200_000
+        self.timeout = 200_000
         # self.timeout = 50000
         # self.timeout = 500_000
         # self.timeout = 200_000
         # self.timeout = 600_000
         # self.timeout = 4_500_000
-        self.timeout = 1_000_000
+        # self.timeout = 1_000_000
         # self.timeout = 10_000_000
         # self.timeout = 50_000_000
         self.reinvigoration = 20000
